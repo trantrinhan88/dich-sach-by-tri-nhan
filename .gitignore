@@ -1,0 +1,5 @@
+.next/
+node_modules/
+.fonts/
+*.env.local
+out/
