@@ -3,16 +3,25 @@
 interface Props {
   completed: number
   total: number
+  onPause: () => void
 }
 
-export default function TranslationProgress({ completed, total }: Props) {
+export default function TranslationProgress({ completed, total, onPause }: Props) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
         <span className="text-white font-medium">Đang dịch...</span>
-        <span className="text-blue-400 font-mono text-sm">{pct}%</span>
+        <div className="flex items-center gap-3">
+          <span className="text-blue-400 font-mono text-sm">{pct}%</span>
+          <button
+            onClick={onPause}
+            className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded-lg font-medium transition-colors"
+          >
+            ⏸ Tạm dừng
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}

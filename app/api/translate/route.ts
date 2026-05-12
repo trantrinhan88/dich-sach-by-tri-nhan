@@ -4,31 +4,8 @@ import { DocumentBlock, TranslationConfig } from '@/lib/types'
 
 export const maxDuration = 300
 
-function splitEnglishSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+(?=[A-Z"'(])/)
-    .map(s => s.trim())
-    .filter(Boolean)
-}
-
-function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
-  const result: DocumentBlock[] = []
-  let seq = 0
-  for (const block of blocks) {
-    if (block.type !== 'paragraph') { result.push(block); continue }
-    const sentences = splitEnglishSentences(block.originalText)
-    if (sentences.length <= 3) { result.push(block); continue }
-    for (let i = 0; i < sentences.length; i += 3) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { translatedText: _t, ...rest } = block
-      result.push({ ...rest, id: `${block.id}-${seq++}`, originalText: sentences.slice(i, i + 3).join(' ') })
-    }
-  }
-  return result
-}
-
 export async function POST(request: NextRequest) {
-  const { blocks, config, bilingual }: { blocks: DocumentBlock[]; config: TranslationConfig; bilingual?: boolean } =
+  const { blocks, config }: { blocks: DocumentBlock[]; config: TranslationConfig } =
     await request.json()
 
   if (!blocks?.length) {
@@ -42,8 +19,6 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'text/event-stream' },
     })
   }
-
-  const workingBlocks = bilingual ? expandForBilingual(blocks) : blocks
 
   const encoder = new TextEncoder()
   const stream = new TransformStream<Uint8Array, Uint8Array>()
@@ -59,8 +34,8 @@ export async function POST(request: NextRequest) {
 
   ;(async () => {
     try {
-      const translated = await translateBlocks(workingBlocks, config, async (completed, total) => {
-        await send({ type: 'progress', completed, total })
+      const translated = await translateBlocks(blocks, config, async (completed, total, newlyTranslated) => {
+        await send({ type: 'progress', completed, total, newlyTranslated })
       })
       await send({ type: 'complete', blocks: translated })
     } catch (err) {

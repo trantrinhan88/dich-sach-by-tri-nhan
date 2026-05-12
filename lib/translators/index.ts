@@ -4,7 +4,11 @@ const CHUNK_SIZE = 12
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1500
 
-type ProgressCallback = (completed: number, total: number) => void
+type ProgressCallback = (
+  completed: number,
+  total: number,
+  newlyTranslated: { id: string; translatedText: string }[]
+) => void
 
 export async function translateBlocks(
   blocks: DocumentBlock[],
@@ -30,7 +34,7 @@ export async function translateBlocks(
     }
 
     completed += chunk.length
-    onProgress(completed, translatableBlocks.length)
+    onProgress(completed, translatableBlocks.length, translated)
   }
 
   return result
