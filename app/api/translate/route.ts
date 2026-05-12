@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { translateBlocks } from '@/lib/translators'
 import { DocumentBlock, TranslationConfig } from '@/lib/types'
 
-export const maxDuration = 600
+export const maxDuration = 300
 
 function splitEnglishSentences(text: string): string[] {
   return text
