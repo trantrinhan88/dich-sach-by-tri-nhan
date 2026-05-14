@@ -36,6 +36,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
   const [apiKey, setApiKey] = useState('')
   const [model, setModel] = useState('')
   const [showKey, setShowKey] = useState(false)
+  const [cefrAnnotation, setCefrAnnotation] = useState(false)
 
   const providerDef = PROVIDERS.find(p => p.value === provider)!
 
@@ -48,6 +49,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
         setProvider(cfg.provider)
         setApiKey(cfg.apiKey)
         setModel(cfg.model || '')
+        setCefrAnnotation(cfg.cefrAnnotation ?? false)
         onConfigChange(cfg)
         setOpen(false)
       }
@@ -63,6 +65,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
       provider,
       apiKey: apiKey.trim(),
       model: model || undefined,
+      cefrAnnotation: cefrAnnotation || undefined,
     }
     localStorage.setItem(LS_KEY, JSON.stringify(cfg))
     onConfigChange(cfg)
@@ -73,6 +76,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
     localStorage.removeItem(LS_KEY)
     setApiKey('')
     setModel('')
+    setCefrAnnotation(false)
     onConfigChange(null)
     setOpen(true)
   }
@@ -89,6 +93,11 @@ export default function ApiConfig({ onConfigChange }: Props) {
           {!open && apiKey && (
             <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
               {providerDef.label} · đã kết nối
+            </span>
+          )}
+          {!open && cefrAnnotation && (
+            <span className="text-xs text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full">
+              CEFR bật
             </span>
           )}
         </div>
@@ -154,6 +163,30 @@ export default function ApiConfig({ onConfigChange }: Props) {
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
+          </div>
+
+          {/* CEFR Annotation */}
+          <div className="border-t border-gray-700 pt-4">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div
+                onClick={() => setCefrAnnotation(v => !v)}
+                className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${cefrAnnotation ? 'bg-blue-600' : 'bg-gray-600'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${cefrAnnotation ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </div>
+              <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                Đánh dấu từ vựng CEFR{' '}
+                <span className="inline-flex gap-1 text-xs">
+                  <span className="text-blue-400 font-bold">B1</span>
+                  <span className="text-green-400 font-bold">B2</span>
+                  <span className="text-amber-400 font-bold">C1</span>
+                  <span className="text-red-400 font-bold">C2</span>
+                </span>
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1.5 ml-13 pl-1">
+              Đánh dấu màu từ vựng tiếng Anh &amp; tiếng Việt theo trình độ CEFR trong file xuất. Dịch chậm hơn một chút.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-1">

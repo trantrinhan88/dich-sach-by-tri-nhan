@@ -13,6 +13,7 @@ import {
   convertMillimetersToTwip,
 } from 'docx'
 import { DocumentBlock } from '../types'
+import { splitByCefr, CEFR_COLORS_HEX } from './cefr'
 
 // Page margins: left 3cm, right/top/bottom 2cm
 const MARGIN_LEFT = convertMillimetersToTwip(30)
@@ -24,6 +25,35 @@ const FIRST_LINE_INDENT = convertMillimetersToTwip(12)
 // Font size: 14pt → half-points = 28
 const BODY_SIZE = 28
 const FONT = 'Times New Roman'
+
+// Build TextRun array from CEFR-annotated text
+function cefrRuns(
+  text: string,
+  baseSize: number,
+  color?: string,
+  italics?: boolean
+): TextRun[] {
+  const segments = splitByCefr(text)
+  return segments.map(seg => {
+    if (seg.cefrLevel) {
+      return new TextRun({
+        text: seg.text,
+        font: FONT,
+        size: Math.max(baseSize - 8, 14),
+        color: CEFR_COLORS_HEX[seg.cefrLevel],
+        bold: true,
+        superScript: true,
+      })
+    }
+    return new TextRun({
+      text: seg.text,
+      font: FONT,
+      size: baseSize,
+      color: color,
+      italics,
+    })
+  })
+}
 
 export async function exportDOCX(blocks: DocumentBlock[], title: string, bilingual = false): Promise<Buffer> {
   const children: (Paragraph | Table)[] = []
@@ -63,9 +93,12 @@ export async function exportDOCX(blocks: DocumentBlock[], title: string, bilingu
         )
         // Bilingual: English heading in gray below
         if (bilingual && block.translatedText) {
+          const enText = block.cefrAnnotatedOriginal || block.originalText
           children.push(
             new Paragraph({
-              children: [new TextRun({ text: block.originalText, font: FONT, size: headingSize - 4, color: '888888', italics: true })],
+              children: block.cefrAnnotatedOriginal
+                ? cefrRuns(enText, headingSize - 4, '888888', true)
+                : [new TextRun({ text: enText, font: FONT, size: headingSize - 4, color: '888888', italics: true })],
               spacing: { after: 120 },
             })
           )
@@ -146,17 +179,24 @@ export async function exportDOCX(blocks: DocumentBlock[], title: string, bilingu
       default: {
         // Bilingual: English (gray, italic) then Vietnamese (normal)
         if (bilingual && block.translatedText) {
+          const enText = block.cefrAnnotatedOriginal || block.originalText
           children.push(
             new Paragraph({
-              children: [new TextRun({ text: block.originalText, font: FONT, size: BODY_SIZE - 2, color: '777777', italics: true })],
+              children: block.cefrAnnotatedOriginal
+                ? cefrRuns(enText, BODY_SIZE - 2, '777777', true)
+                : [new TextRun({ text: enText, font: FONT, size: BODY_SIZE - 2, color: '777777', italics: true })],
               spacing: { after: 40 },
               alignment: AlignmentType.LEFT,
             })
           )
         }
+        // Vietnamese paragraph with CEFR or plain
+        const viText = block.cefrAnnotatedTranslation || text
         children.push(
           new Paragraph({
-            children: [new TextRun({ text, font: FONT, size: BODY_SIZE })],
+            children: block.cefrAnnotatedTranslation
+              ? cefrRuns(viText, BODY_SIZE)
+              : [new TextRun({ text: viText, font: FONT, size: BODY_SIZE })],
             spacing: { after: 0, line: 276, lineRule: 'auto' },
             alignment: AlignmentType.JUSTIFIED,
             indent: { firstLine: FIRST_LINE_INDENT },

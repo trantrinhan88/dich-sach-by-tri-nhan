@@ -1,5 +1,6 @@
 import { DocumentBlock } from '../types'
 import { getFont } from '../fonts'
+import { splitByCefr, CEFR_COLORS } from './cefr'
 import fs from 'fs/promises'
 
 // 1cm = 28.3465pt
@@ -14,6 +15,34 @@ async function trySystemFont(fontPath: string): Promise<Buffer | null> {
     return await fs.readFile(fontPath)
   } catch {
     return null
+  }
+}
+
+// Render CEFR-annotated text inline with colored markers using pdfkit continued mode
+function renderCefrText(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  doc: any,
+  text: string,
+  font: string,
+  size: number,
+  options: Record<string, unknown>
+): void {
+  const segments = splitByCefr(text)
+  for (let idx = 0; idx < segments.length; idx++) {
+    const seg = segments[idx]
+    const isLast = idx === segments.length - 1
+    if (seg.cefrLevel) {
+      doc.fillColor(CEFR_COLORS[seg.cefrLevel])
+        .font(font)
+        .fontSize(size - 4)
+        .text(seg.text, { ...options, continued: !isLast, indent: 0 })
+      doc.fillColor('#000000').fontSize(size)
+    } else {
+      doc.font(font)
+        .fontSize(size)
+        .fillColor('#000000')
+        .text(seg.text, { ...options, continued: !isLast })
+    }
   }
 }
 
@@ -91,8 +120,13 @@ export async function exportPDF(blocks: DocumentBlock[], title: string, bilingua
           doc.moveDown(0.8)
           doc.font(boldFontName).fontSize(size).text(text, { width: pageWidth })
           if (bilingual && block.translatedText && block.originalText !== text) {
-            doc.fillColor('#888888').font(regularFontName).fontSize(size - 2)
-              .text(block.originalText, { width: pageWidth })
+            const enText = block.cefrAnnotatedOriginal || block.originalText
+            if (block.cefrAnnotatedOriginal) {
+              renderCefrText(doc, enText, regularFontName, size - 2, { width: pageWidth, align: 'left' })
+            } else {
+              doc.fillColor('#888888').font(regularFontName).fontSize(size - 2)
+                .text(enText, { width: pageWidth })
+            }
             doc.fillColor('#000000')
           }
           doc.moveDown(0.4)
@@ -144,20 +178,36 @@ export async function exportPDF(blocks: DocumentBlock[], title: string, bilingua
         default: {
           // Bilingual: English original (gray, italic) then Vietnamese
           if (bilingual && block.translatedText) {
-            doc.fillColor('#777777').font(regularFontName).fontSize(BODY_SIZE - 1)
-              .text(block.originalText, { width: pageWidth, lineBreak: true })
-            doc.fillColor('#000000')
+            const enText = block.cefrAnnotatedOriginal || block.originalText
+            if (block.cefrAnnotatedOriginal) {
+              doc.fillColor('#777777')
+              renderCefrText(doc, enText, regularFontName, BODY_SIZE - 1, { width: pageWidth, align: 'left', indent: FIRST_LINE_INDENT })
+              doc.fillColor('#000000')
+            } else {
+              doc.fillColor('#777777').font(regularFontName).fontSize(BODY_SIZE - 1)
+                .text(enText, { width: pageWidth, lineBreak: true, indent: FIRST_LINE_INDENT })
+              doc.fillColor('#000000')
+            }
           }
           const isBold = block.style.fontWeight === 'bold'
-          doc
-            .font(isBold ? boldFontName : regularFontName)
-            .fontSize(BODY_SIZE)
-            .text(text, {
+          const viText = block.cefrAnnotatedTranslation || text
+          if (block.cefrAnnotatedTranslation && !isBold) {
+            renderCefrText(doc, viText, regularFontName, BODY_SIZE, {
               width: pageWidth,
-              align: isBold ? 'left' : 'justify',
-              indent: isBold ? 0 : FIRST_LINE_INDENT,
-              lineBreak: true,
+              align: 'left',
+              indent: FIRST_LINE_INDENT,
             })
+          } else {
+            doc
+              .font(isBold ? boldFontName : regularFontName)
+              .fontSize(BODY_SIZE)
+              .text(viText, {
+                width: pageWidth,
+                align: isBold ? 'left' : 'justify',
+                indent: isBold ? 0 : FIRST_LINE_INDENT,
+                lineBreak: true,
+              })
+          }
           doc.moveDown(isBold ? 0.4 : 0.2)
           break
         }

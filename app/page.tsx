@@ -22,11 +22,11 @@ function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
   for (const block of blocks) {
     if (block.type !== 'paragraph') { result.push(block); continue }
     const sentences = splitEnglishSentences(block.originalText)
-    if (sentences.length <= 3) { result.push(block); continue }
-    for (let i = 0; i < sentences.length; i += 3) {
+    if (sentences.length <= 2) { result.push(block); continue }
+    for (let i = 0; i < sentences.length; i += 2) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { translatedText: _t, ...rest } = block
-      result.push({ ...rest, id: `${block.id}-${seq++}`, originalText: sentences.slice(i, i + 3).join(' ') })
+      const { translatedText: _t, cefrAnnotatedOriginal: _co, cefrAnnotatedTranslation: _ct, ...rest } = block
+      result.push({ ...rest, id: `${block.id}-${seq++}`, originalText: sentences.slice(i, i + 2).join(' ') })
     }
   }
   return result
@@ -92,7 +92,11 @@ export default function Home() {
               const next = prev.map(b => ({ ...b }))
               for (const t of data.newlyTranslated) {
                 const block = next.find(b => b.id === t.id)
-                if (block) block.translatedText = t.translatedText
+                if (block) {
+                  block.translatedText = t.translatedText
+                  if (t.cefrAnnotatedOriginal) block.cefrAnnotatedOriginal = t.cefrAnnotatedOriginal
+                  if (t.cefrAnnotatedTranslation) block.cefrAnnotatedTranslation = t.cefrAnnotatedTranslation
+                }
               }
               return next
             })
@@ -171,7 +175,13 @@ export default function Home() {
         setPartialTranslated(prev =>
           prev.map(b => {
             const updated = translated.find(t => t.id === b.id)
-            return updated?.translatedText ? { ...b, translatedText: updated.translatedText } : b
+            if (!updated?.translatedText) return b
+            return {
+              ...b,
+              translatedText: updated.translatedText,
+              ...(updated.cefrAnnotatedOriginal && { cefrAnnotatedOriginal: updated.cefrAnnotatedOriginal }),
+              ...(updated.cefrAnnotatedTranslation && { cefrAnnotatedTranslation: updated.cefrAnnotatedTranslation }),
+            }
           })
         )
       })
@@ -314,7 +324,7 @@ export default function Home() {
 
               {bilingual && (
                 <span className="text-purple-300 text-sm">
-                  Mỗi đoạn tối đa 3 câu · xuất kèm bản gốc tiếng Anh
+                  Mỗi đoạn tối đa 2 câu · xuất kèm bản gốc tiếng Anh
                 </span>
               )}
 
@@ -388,11 +398,15 @@ export default function Home() {
             </div>
 
             {/* Export partial results */}
-            {translatedCount > 0 && (
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-                <p className="text-gray-300 text-sm font-medium mb-3">
-                  📦 Xuất {translatedCount} đoạn đã dịch
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+              <p className="text-gray-300 text-sm font-medium mb-3">
+                📦 Xuất file {translatedCount > 0 ? `(${translatedCount} đoạn đã dịch)` : ''}
+              </p>
+              {translatedCount === 0 ? (
+                <p className="text-yellow-400/80 text-sm">
+                  Chưa có đoạn nào hoàn thành. Bấm <span className="font-semibold">▶ Dịch tiếp</span> để dịch thêm rồi tạm dừng lại để xuất.
                 </p>
+              ) : (
                 <div className="flex flex-wrap gap-2 items-center">
                   {(['epub', 'html', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
                     <button
@@ -414,14 +428,14 @@ export default function Home() {
                   >
                     {exporting ? '⏳ Đang tạo...' : '⬇ Tải về'}
                   </button>
+                  {exportFormat === 'pdf' && (
+                    <p className="text-yellow-300/70 text-xs mt-2 w-full">
+                      💡 Các đoạn chưa dịch sẽ hiển thị bản gốc tiếng Anh.
+                    </p>
+                  )}
                 </div>
-                {exportFormat === 'pdf' && (
-                  <p className="text-yellow-300/70 text-xs mt-2">
-                    💡 Các đoạn chưa dịch sẽ hiển thị bản gốc tiếng Anh.
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </section>
         )}
 

@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import { DocumentBlock } from '../types'
+import { renderCefrHTML, CEFR_CSS } from './cefr'
 
 export async function exportEPUB(blocks: DocumentBlock[], title: string, bilingual = false): Promise<Buffer> {
   const zip = new JSZip()
@@ -21,6 +22,8 @@ export async function exportEPUB(blocks: DocumentBlock[], title: string, bilingu
 </container>`
   )
 
+  const hasCefr = blocks.some(b => b.cefrAnnotatedTranslation || b.cefrAnnotatedOriginal)
+
   const bilingualCSS = bilingual ? `
 .en-text {
   color: #777;
@@ -34,6 +37,8 @@ export async function exportEPUB(blocks: DocumentBlock[], title: string, bilingu
   margin: 0 0 0.8em;
   text-indent: 1.2cm;
 }` : ''
+
+  const cefrCSS = hasCefr ? CEFR_CSS : ''
 
   // CSS
   zip.file(
@@ -98,7 +103,7 @@ table { border-collapse: collapse; width: 100%; margin: 1em 0; }
 
 em { font-style: italic; }
 strong { font-weight: bold; }
-${bilingualCSS}`
+${bilingualCSS}${cefrCSS}`
   )
 
   // Build content HTML
@@ -160,8 +165,13 @@ ${navPoints || `    <navPoint id="nav0" playOrder="1"><navLabel><text>${safeTitl
 function buildContentHTML(blocks: DocumentBlock[], title: string, bilingual: boolean): string {
   const body = blocks
     .map(block => {
-      const vi = esc(block.translatedText || block.originalText)
-      const en = esc(block.originalText)
+      const rawVi = block.translatedText || block.originalText
+      const vi = block.cefrAnnotatedTranslation
+        ? renderCefrHTML(esc(block.cefrAnnotatedTranslation))
+        : esc(rawVi)
+      const en = block.cefrAnnotatedOriginal
+        ? renderCefrHTML(esc(block.cefrAnnotatedOriginal))
+        : esc(block.originalText)
 
       switch (block.type) {
         case 'heading': {

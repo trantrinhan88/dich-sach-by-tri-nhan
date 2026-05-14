@@ -4,10 +4,17 @@ const CHUNK_SIZE = 12
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1500
 
+type TranslatedItem = {
+  id: string
+  translatedText: string
+  cefrAnnotatedOriginal?: string
+  cefrAnnotatedTranslation?: string
+}
+
 type ProgressCallback = (
   completed: number,
   total: number,
-  newlyTranslated: { id: string; translatedText: string }[]
+  newlyTranslated: TranslatedItem[]
 ) => void
 
 export async function translateBlocks(
@@ -30,7 +37,11 @@ export async function translateBlocks(
 
     for (const t of translated) {
       const target = result.find(b => b.id === t.id)
-      if (target) target.translatedText = t.translatedText
+      if (target) {
+        target.translatedText = t.translatedText
+        if (t.cefrAnnotatedOriginal) target.cefrAnnotatedOriginal = t.cefrAnnotatedOriginal
+        if (t.cefrAnnotatedTranslation) target.cefrAnnotatedTranslation = t.cefrAnnotatedTranslation
+      }
     }
 
     completed += chunk.length
@@ -46,7 +57,7 @@ async function translateChunkWithRetry(
   contextAfter: string | undefined,
   config: TranslationConfig,
   attempt = 0
-): Promise<{ id: string; translatedText: string }[]> {
+): Promise<TranslatedItem[]> {
   try {
     return await callTranslationAPI(chunk, contextBefore, contextAfter, config)
   } catch (err) {
@@ -65,8 +76,8 @@ async function callTranslationAPI(
   contextBefore: string | undefined,
   contextAfter: string | undefined,
   config: TranslationConfig
-): Promise<{ id: string; translatedText: string }[]> {
-  const prompt = buildPrompt(chunk, contextBefore, contextAfter)
+): Promise<TranslatedItem[]> {
+  const prompt = buildPrompt(chunk, contextBefore, contextAfter, config.cefrAnnotation)
   let rawText: string
 
   if (config.provider === 'deepseek' || config.provider === 'openai') {
@@ -101,7 +112,7 @@ async function callTranslationAPI(
   const jsonMatch = rawText.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('AI response is not valid JSON')
 
-  const parsed = JSON.parse(jsonMatch[0]) as { translations?: { id: string; translatedText: string }[] }
+  const parsed = JSON.parse(jsonMatch[0]) as { translations?: TranslatedItem[] }
   if (!Array.isArray(parsed.translations)) throw new Error('AI response missing "translations" array')
   return parsed.translations
 }
@@ -109,7 +120,8 @@ async function callTranslationAPI(
 function buildPrompt(
   chunk: DocumentBlock[],
   contextBefore?: string,
-  contextAfter?: string
+  contextAfter?: string,
+  cefrAnnotation?: boolean
 ): string {
   const items = chunk.map(b => ({
     id: b.id,
@@ -117,10 +129,25 @@ function buildPrompt(
     text: b.originalText,
   }))
 
+  const cefrSection = cefrAnnotation ? `
+ĐÁNH DẤU CEFR (bắt buộc khi bật tính năng này):
+- Xác định từ/cụm từ tiếng Anh từ B1 trở lên (B1, B2, C1, C2) theo khung CEFR châu Âu
+- cefrAnnotatedOriginal: thêm [B1], [B2], [C1] hoặc [C2] ngay SAU từ/cụm từ tiếng Anh đó
+- cefrAnnotatedTranslation: thêm CÙNG nhãn ngay SAU từ/cụm từ tiếng Việt tương ứng
+- translatedText: bản dịch thuần tiếng Việt, KHÔNG có nhãn CEFR
+- Chỉ đánh dấu từ B1 trở lên; từ thông thường A1/A2 KHÔNG đánh dấu
+- Ví dụ EN: "The sophisticated [C1] algorithm [B2] efficiently [C1] processes data."
+- Ví dụ VI: "Thuật toán [B2] tinh vi [C1] xử lý [C1] dữ liệu một cách hiệu quả."
+` : ''
+
+  const responseFormat = cefrAnnotation
+    ? `{"translations": [{"id": "...", "translatedText": "...", "cefrAnnotatedOriginal": "...", "cefrAnnotatedTranslation": "..."}, ...]}`
+    : `{"translations": [{"id": "...", "translatedText": "..."}, ...]}`
+
   return `Bạn là dịch giả chuyên nghiệp, thành thạo dịch mọi ngôn ngữ sang tiếng Việt tự nhiên, chuẩn văn phong.
 
 QUY TẮC DỊCH:
-- Trả về JSON hợp lệ: {"translations": [{"id": "...", "translatedText": "..."}, ...]}
+- Trả về JSON hợp lệ: ${responseFormat}
 - Dịch tự nhiên, lưu loát như người Việt viết, không dịch máy
 - Giữ nguyên thuật ngữ kỹ thuật nếu chưa có bản dịch chuẩn (ví dụ: API, blockchain, framework)
 - Giữ nguyên tên riêng: người, địa danh, thương hiệu, tên sản phẩm
@@ -129,7 +156,7 @@ QUY TẮC DỊCH:
 - Với type="heading": dịch ngắn gọn, súc tích, đúng văn phong tiêu đề
 - Với type="list-item": dịch nhất quán về cách dùng từ với các mục khác trong danh sách
 - Mỗi block dịch đủ ngữ nghĩa, không tóm tắt hay bỏ bớt ý
-
+${cefrSection}
 ${contextBefore ? `NGỮ CẢNH PHÍA TRƯỚC (chỉ để tham khảo, KHÔNG dịch): "${contextBefore.slice(0, 300)}"` : ''}
 ${contextAfter ? `NGỮ CẢNH PHÍA SAU (chỉ để tham khảo, KHÔNG dịch): "${contextAfter.slice(0, 300)}"` : ''}
 

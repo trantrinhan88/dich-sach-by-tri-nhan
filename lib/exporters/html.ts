@@ -1,13 +1,21 @@
 import { DocumentBlock } from '../types'
+import { renderCefrHTML, CEFR_CSS } from './cefr'
 
 export function exportHTML(blocks: DocumentBlock[], title: string, bilingual = false): string {
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
+  const hasCefr = blocks.some(b => b.cefrAnnotatedTranslation || b.cefrAnnotatedOriginal)
+
   const body = blocks
     .map(block => {
-      const vi = esc(block.translatedText || block.originalText)
-      const en = esc(block.originalText)
+      const rawVi = block.translatedText || block.originalText
+      const vi = block.cefrAnnotatedTranslation
+        ? renderCefrHTML(esc(block.cefrAnnotatedTranslation))
+        : esc(rawVi)
+      const en = block.cefrAnnotatedOriginal
+        ? renderCefrHTML(esc(block.cefrAnnotatedOriginal))
+        : esc(block.originalText)
       const isUntranslated = !block.translatedText
 
       switch (block.type) {
@@ -36,9 +44,11 @@ export function exportHTML(blocks: DocumentBlock[], title: string, bilingual = f
     .join('\n  ')
 
   const bilingualCSS = bilingual ? `
-    .en-para { color: #666; font-size: 0.93em; margin: 0.8rem 0 0.1rem; font-style: italic; }
+    .en-para { color: #666; font-size: 0.93em; margin: 0.8rem 0 0.1rem; font-style: italic; text-indent: 0; }
     .vi-para { margin: 0 0 1rem; }
     .en-heading { color: #999; font-size: 0.88em; margin: 0 0 0.5rem; font-style: italic; font-weight: normal; }` : ''
+
+  const cefrCSS = hasCefr ? CEFR_CSS : ''
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -65,14 +75,14 @@ export function exportHTML(blocks: DocumentBlock[], title: string, bilingual = f
     h3 { font-size: 1.5em; margin: 1.4rem 0 0.6rem; }
     h4 { font-size: 1.25em; margin: 1.2rem 0 0.5rem; }
     h5, h6 { font-size: 1.1em; margin: 1rem 0 0.4rem; }
-    p { margin: 0.75rem 0; }
+    p { margin: 0.4rem 0; text-indent: 1.2cm; }
     li { margin: 0.3rem 0 0.3rem 1.5rem; }
     td { border: 1px solid #d0d0d0; padding: 0.5rem 0.75rem; }
     table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
     figcaption { font-size: 0.9em; color: #555; font-style: italic; margin: 0.4rem 0; }
-    pre { background: #f3f4f6; padding: 1rem 1.25rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; }
+    pre { background: #f3f4f6; padding: 1rem 1.25rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; text-indent: 0; }
     code { font-family: 'Courier New', monospace; font-size: 0.9em; }
-    .untranslated { background: #fff3cd; outline: 2px dashed #ffc107; }${bilingualCSS}
+    .untranslated { background: #fff3cd; outline: 2px dashed #ffc107; }${bilingualCSS}${cefrCSS}
     @media print {
       body { max-width: 100%; background: white; padding: 1cm 2cm; }
       .untranslated { background: none; outline: none; }

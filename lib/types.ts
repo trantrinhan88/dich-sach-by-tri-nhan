@@ -21,6 +21,8 @@ export interface DocumentBlock {
   type: BlockType
   originalText: string
   translatedText?: string
+  cefrAnnotatedOriginal?: string
+  cefrAnnotatedTranslation?: string
   style: BlockStyle
   position?: {
     page: number
@@ -39,6 +41,7 @@ export interface TranslationConfig {
   provider: AIProvider
   apiKey: string
   model?: string
+  cefrAnnotation?: boolean
 }
 
 export interface ParseResult {
