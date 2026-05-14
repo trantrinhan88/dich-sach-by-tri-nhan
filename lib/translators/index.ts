@@ -113,7 +113,7 @@ async function callTranslationAPI(
     const genAI = new GoogleGenerativeAI(config.apiKey)
     const model = genAI.getGenerativeModel({
       model: config.model || 'gemini-2.5-flash-preview-05-20',
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+      generationConfig: { responseMimeType: 'application/json' },
     })
     const res = await model.generateContent(prompt)
     rawText = res.response.text()
