@@ -22,16 +22,22 @@ function BlockRow({ block, bilingual }: { block: DocumentBlock; bilingual: boole
   const isCode = block.type === 'code'
   const isUntranslated = !block.translatedText && !isCode
 
-  // Bilingual paragraph: stacked EN (gray) → VI
-  if (bilingual && block.translatedText && block.type === 'paragraph') {
+  // Bilingual heading: VI (bold) then EN (gray, small) — matching export order
+  if (bilingual && block.translatedText && block.type === 'heading') {
     return (
-      <div className="rounded-lg overflow-hidden text-sm border border-gray-700">
-        <div className="bg-gray-900 px-3 py-2 border-b border-gray-700/50">
-          <p className="text-gray-500 italic text-xs leading-relaxed whitespace-pre-wrap">{block.originalText}</p>
-        </div>
-        <div className="bg-gray-950 px-3 py-2.5">
-          <p className="text-gray-100 leading-relaxed whitespace-pre-wrap">{block.translatedText}</p>
-        </div>
+      <div className="text-sm space-y-0.5 py-0.5">
+        <p className={`text-gray-100 font-bold leading-snug whitespace-pre-wrap ${block.style.level === 1 ? 'text-lg' : block.style.level === 2 ? 'text-base' : 'text-sm'}`}>{block.translatedText}</p>
+        <p className="text-gray-600 italic text-xs leading-snug whitespace-pre-wrap">{block.originalText}</p>
+      </div>
+    )
+  }
+
+  // Bilingual paragraph: flowing EN (gray, italic) → VI (white) — like reading a bilingual book
+  if (bilingual && block.translatedText && (block.type === 'paragraph' || block.type === 'list-item' || block.type === 'caption')) {
+    return (
+      <div className="text-sm space-y-1 py-0.5">
+        <p className="text-gray-500 italic text-xs leading-relaxed whitespace-pre-wrap">{block.originalText}</p>
+        <p className="text-gray-100 leading-relaxed whitespace-pre-wrap">{block.translatedText}</p>
       </div>
     )
   }
