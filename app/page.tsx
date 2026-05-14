@@ -22,11 +22,11 @@ function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
   for (const block of blocks) {
     if (block.type !== 'paragraph') { result.push(block); continue }
     const sentences = splitEnglishSentences(block.originalText)
-    if (sentences.length <= 2) { result.push(block); continue }
-    for (let i = 0; i < sentences.length; i += 2) {
+    if (sentences.length <= 1) { result.push(block); continue }
+    for (let i = 0; i < sentences.length; i += 1) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { translatedText: _t, cefrAnnotatedOriginal: _co, cefrAnnotatedTranslation: _ct, ...rest } = block
-      result.push({ ...rest, id: `${block.id}-${seq++}`, originalText: sentences.slice(i, i + 2).join(' ') })
+      result.push({ ...rest, id: `${block.id}-${seq++}`, originalText: sentences[i] })
     }
   }
   return result
@@ -324,7 +324,7 @@ export default function Home() {
 
               {bilingual && (
                 <span className="text-purple-300 text-sm">
-                  Mỗi đoạn tối đa 2 câu · xuất kèm bản gốc tiếng Anh
+                  Mỗi đoạn 1 câu · xuất kèm bản gốc tiếng Anh
                 </span>
               )}
 

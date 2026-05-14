@@ -34,7 +34,7 @@ export interface DocumentBlock {
   metadata?: Record<string, unknown>
 }
 
-export type AIProvider = 'deepseek' | 'gemini' | 'openai'
+export type AIProvider = 'deepseek' | 'gemini' | 'openai' | 'claude'
 export type ExportFormat = 'html' | 'pdf' | 'epub' | 'docx'
 
 export interface TranslationConfig {

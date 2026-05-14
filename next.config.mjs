@@ -7,7 +7,7 @@ const nextConfig = {
     return config
   },
   experimental: {
-    serverComponentsExternalPackages: ['pdf-parse', 'pdfkit', 'jszip', 'cheerio'],
+    serverComponentsExternalPackages: ['pdf-parse', 'pdfkit', 'jszip', 'cheerio', '@anthropic-ai/sdk'],
   },
 }
 

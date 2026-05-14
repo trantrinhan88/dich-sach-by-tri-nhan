@@ -3,24 +3,34 @@
 import { useState, useEffect } from 'react'
 import { AIProvider, TranslationConfig } from '@/lib/types'
 
-const PROVIDERS: { value: AIProvider; label: string; models: string[]; placeholder: string }[] = [
+const PROVIDERS: { value: AIProvider; label: string; models: string[]; placeholder: string; envKey: string }[] = [
   {
     value: 'deepseek',
     label: 'DeepSeek',
     models: ['deepseek-chat', 'deepseek-reasoner'],
     placeholder: 'sk-...',
+    envKey: 'DEEPSEEK_API_KEY',
   },
   {
     value: 'gemini',
     label: 'Gemini',
-    models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+    models: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-flash-lite-preview-06-17'],
     placeholder: 'AIza...',
+    envKey: 'GEMINI_API_KEY',
   },
   {
     value: 'openai',
     label: 'OpenAI',
     models: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
     placeholder: 'sk-...',
+    envKey: 'OPENAI_API_KEY',
+  },
+  {
+    value: 'claude',
+    label: 'Claude',
+    models: ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'],
+    placeholder: 'sk-ant-...',
+    envKey: 'ANTHROPIC_API_KEY',
   },
 ]
 
@@ -37,10 +47,18 @@ export default function ApiConfig({ onConfigChange }: Props) {
   const [model, setModel] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [cefrAnnotation, setCefrAnnotation] = useState(false)
+  const [envStatus, setEnvStatus] = useState<'idle' | 'saving' | 'loading' | 'saved' | 'loaded' | 'error'>('idle')
+  const [showEnvPanel, setShowEnvPanel] = useState(false)
+  const [envKeys, setEnvKeys] = useState<Record<string, string>>({
+    DEEPSEEK_API_KEY: '',
+    GEMINI_API_KEY: '',
+    OPENAI_API_KEY: '',
+    ANTHROPIC_API_KEY: '',
+  })
 
   const providerDef = PROVIDERS.find(p => p.value === provider)!
 
-  // Load from localStorage
+  // Load from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LS_KEY)
@@ -81,6 +99,70 @@ export default function ApiConfig({ onConfigChange }: Props) {
     setOpen(true)
   }
 
+  // Load all env keys from .env.local
+  const loadEnvKeys = async () => {
+    setEnvStatus('loading')
+    try {
+      const res = await fetch('/api/env-keys')
+      const data = await res.json() as Record<string, string>
+      setEnvKeys(data)
+      // Auto-fill current provider's key if available
+      const currentEnvKey = providerDef.envKey
+      if (data[currentEnvKey]) {
+        setApiKey(data[currentEnvKey])
+      }
+      setEnvStatus('loaded')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    } catch {
+      setEnvStatus('error')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    }
+  }
+
+  // Save current key to .env.local
+  const saveToEnv = async () => {
+    if (!apiKey.trim()) return
+    setEnvStatus('saving')
+    try {
+      await fetch('/api/env-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [providerDef.envKey]: apiKey.trim() }),
+      })
+      setEnvStatus('saved')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    } catch {
+      setEnvStatus('error')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    }
+  }
+
+  // Save all env keys from panel
+  const saveAllEnvKeys = async () => {
+    setEnvStatus('saving')
+    try {
+      await fetch('/api/env-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(envKeys),
+      })
+      setEnvStatus('saved')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    } catch {
+      setEnvStatus('error')
+      setTimeout(() => setEnvStatus('idle'), 2000)
+    }
+  }
+
+  const envStatusLabel = {
+    idle: null,
+    saving: '⏳ Đang lưu...',
+    loading: '⏳ Đang tải...',
+    saved: '✅ Đã lưu vào .env.local',
+    loaded: '✅ Đã tải từ .env.local',
+    error: '❌ Lỗi thao tác file',
+  }[envStatus]
+
   return (
     <div className="rounded-xl border border-gray-700 bg-gray-900 overflow-hidden">
       <button
@@ -109,7 +191,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
           {/* Provider */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Provider</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {PROVIDERS.map(p => (
                 <button
                   key={p.value}
@@ -129,7 +211,8 @@ export default function ApiConfig({ onConfigChange }: Props) {
           {/* API Key */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">
-              API Key <span className="text-gray-500">(lưu local, không gửi server)</span>
+              API Key{' '}
+              <span className="text-gray-500 text-xs">({providerDef.envKey})</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -184,9 +267,71 @@ export default function ApiConfig({ onConfigChange }: Props) {
                 </span>
               </span>
             </label>
-            <p className="text-xs text-gray-500 mt-1.5 ml-13 pl-1">
+            <p className="text-xs text-gray-500 mt-1.5 pl-13">
               Đánh dấu màu từ vựng tiếng Anh &amp; tiếng Việt theo trình độ CEFR trong file xuất. Dịch chậm hơn một chút.
             </p>
+          </div>
+
+          {/* Env file management */}
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-400">Quản lý .env.local</span>
+              <button
+                onClick={() => { setShowEnvPanel(v => !v); if (!showEnvPanel) loadEnvKeys() }}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                {showEnvPanel ? 'Ẩn' : 'Quản lý tất cả key'}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={loadEnvKeys}
+                className="px-3 py-1.5 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-xs font-medium transition-colors"
+              >
+                ↓ Tải từ .env
+              </button>
+              <button
+                onClick={saveToEnv}
+                disabled={!apiKey.trim()}
+                className="px-3 py-1.5 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-xs font-medium transition-colors disabled:opacity-40"
+              >
+                ↑ Lưu vào .env
+              </button>
+              {envStatusLabel && (
+                <span className={`text-xs self-center ${envStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                  {envStatusLabel}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-600 mt-1.5">
+              Lưu API key vào file .env.local — tự điền lại mỗi lần mở app.
+            </p>
+
+            {/* All-keys panel */}
+            {showEnvPanel && (
+              <div className="mt-3 bg-gray-800 rounded-lg p-3 space-y-2 border border-gray-700">
+                <p className="text-xs text-gray-400 font-medium mb-2">Tất cả API key trong .env.local:</p>
+                {PROVIDERS.map(p => (
+                  <div key={p.value} className="flex gap-2 items-center">
+                    <span className="text-xs text-gray-500 w-24 shrink-0">{p.label}:</span>
+                    <input
+                      type="password"
+                      value={envKeys[p.envKey] || ''}
+                      onChange={e => setEnvKeys(prev => ({ ...prev, [p.envKey]: e.target.value }))}
+                      placeholder={p.placeholder}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={saveAllEnvKeys}
+                  className="w-full mt-2 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-500 transition-colors"
+                >
+                  Lưu tất cả vào .env.local
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-1">

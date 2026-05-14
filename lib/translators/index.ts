@@ -97,12 +97,22 @@ async function callTranslationAPI(
       temperature: 0.2,
     })
     rawText = res.choices[0].message.content || '{}'
+  } else if (config.provider === 'claude') {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk')
+    const client = new Anthropic({ apiKey: config.apiKey })
+    const model = config.model || 'claude-sonnet-4-6'
+    const res = await client.messages.create({
+      model,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt + '\n\nChỉ trả về JSON thuần túy, không có markdown hay giải thích thêm.' }],
+    })
+    rawText = res.content[0].type === 'text' ? res.content[0].text : '{}'
   } else {
     // Gemini
     const { GoogleGenerativeAI } = await import('@google/generative-ai')
     const genAI = new GoogleGenerativeAI(config.apiKey)
     const model = genAI.getGenerativeModel({
-      model: config.model || 'gemini-2.0-flash',
+      model: config.model || 'gemini-2.5-flash-preview-05-20',
       generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
     })
     const res = await model.generateContent(prompt)
@@ -144,21 +154,24 @@ function buildPrompt(
     ? `{"translations": [{"id": "...", "translatedText": "...", "cefrAnnotatedOriginal": "...", "cefrAnnotatedTranslation": "..."}, ...]}`
     : `{"translations": [{"id": "...", "translatedText": "..."}, ...]}`
 
-  return `Bạn là dịch giả chuyên nghiệp, thành thạo dịch mọi ngôn ngữ sang tiếng Việt tự nhiên, chuẩn văn phong.
+  return `Bạn là chuyên gia dịch thuật hàng đầu với hơn 20 năm kinh nghiệm dịch sách, tài liệu học thuật và văn bản chuyên ngành từ tiếng Anh sang tiếng Việt. Bạn am hiểu sâu sắc cả hai nền văn hóa và ngôn ngữ, có khả năng truyền tải chính xác ý nghĩa, sắc thái, và văn phong của tác giả gốc vào tiếng Việt tự nhiên, trong sáng.
 
-QUY TẮC DỊCH:
+QUY TẮC DỊCH CHUYÊN NGHIỆP:
 - Trả về JSON hợp lệ: ${responseFormat}
-- Dịch tự nhiên, lưu loát như người Việt viết, không dịch máy
-- Giữ nguyên thuật ngữ kỹ thuật nếu chưa có bản dịch chuẩn (ví dụ: API, blockchain, framework)
+- Dịch theo ngữ cảnh: hiểu toàn bộ đoạn văn trước khi dịch, không dịch từng từ rời rạc
+- Giữ giọng văn và phong cách của tác giả (trang trọng, thân mật, học thuật, kỹ thuật...)
+- Dùng từ ngữ tiếng Việt tự nhiên, lưu loát như người bản ngữ viết — tránh lối dịch "Tây hóa"
+- Ưu tiên thành ngữ, cách diễn đạt tiếng Việt tương đương thay vì dịch từng chữ
+- Giữ nguyên thuật ngữ kỹ thuật chưa có bản dịch chuẩn (API, blockchain, framework, v.v.)
 - Giữ nguyên tên riêng: người, địa danh, thương hiệu, tên sản phẩm
-- Giữ nguyên số, ký hiệu toán học, đơn vị đo lường
-- Với type="code": KHÔNG dịch, giữ nguyên 100%
-- Với type="heading": dịch ngắn gọn, súc tích, đúng văn phong tiêu đề
-- Với type="list-item": dịch nhất quán về cách dùng từ với các mục khác trong danh sách
-- Mỗi block dịch đủ ngữ nghĩa, không tóm tắt hay bỏ bớt ý
+- Giữ nguyên số, ký hiệu toán học, đơn vị đo lường, công thức
+- type="code": KHÔNG dịch, giữ nguyên 100%
+- type="heading": dịch súc tích, rõ ý, đúng văn phong tiêu đề tiếng Việt
+- type="list-item": nhất quán cách dùng từ trong toàn bộ danh sách
+- Mỗi block phải dịch đầy đủ ngữ nghĩa, không lược bớt hay tóm tắt ý
 ${cefrSection}
-${contextBefore ? `NGỮ CẢNH PHÍA TRƯỚC (chỉ để tham khảo, KHÔNG dịch): "${contextBefore.slice(0, 300)}"` : ''}
-${contextAfter ? `NGỮ CẢNH PHÍA SAU (chỉ để tham khảo, KHÔNG dịch): "${contextAfter.slice(0, 300)}"` : ''}
+${contextBefore ? `NGỮ CẢNH ĐOẠN TRƯỚC (tham khảo để dịch nhất quán, KHÔNG dịch lại): "${contextBefore.slice(0, 300)}"` : ''}
+${contextAfter ? `NGỮ CẢNH ĐOẠN SAU (tham khảo để hiểu mạch văn, KHÔNG dịch): "${contextAfter.slice(0, 300)}"` : ''}
 
 BLOCKS CẦN DỊCH:
 ${JSON.stringify(items, null, 2)}`
