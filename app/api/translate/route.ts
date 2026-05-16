@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     try {
       const translated = await translateBlocks(blocks, config, async (completed, total, newlyTranslated) => {
         await send({ type: 'progress', completed, total, newlyTranslated })
-      })
+      }, request.signal)
       await send({ type: 'complete', blocks: translated })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lỗi dịch'

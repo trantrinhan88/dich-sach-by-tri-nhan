@@ -89,16 +89,19 @@ export default function Home() {
           setProgress({ completed: data.completed, total: data.total })
           if (data.newlyTranslated?.length) {
             setPartialTranslated(prev => {
-              const next = prev.map(b => ({ ...b }))
+              const map = new Map(prev.map(b => [b.id, b]))
               for (const t of data.newlyTranslated) {
-                const block = next.find(b => b.id === t.id)
+                const block = map.get(t.id)
                 if (block) {
-                  block.translatedText = t.translatedText
-                  if (t.cefrAnnotatedOriginal) block.cefrAnnotatedOriginal = t.cefrAnnotatedOriginal
-                  if (t.cefrAnnotatedTranslation) block.cefrAnnotatedTranslation = t.cefrAnnotatedTranslation
+                  map.set(t.id, {
+                    ...block,
+                    translatedText: t.translatedText,
+                    ...(t.cefrAnnotatedOriginal && { cefrAnnotatedOriginal: t.cefrAnnotatedOriginal }),
+                    ...(t.cefrAnnotatedTranslation && { cefrAnnotatedTranslation: t.cefrAnnotatedTranslation }),
+                  })
                 }
               }
-              return next
+              return prev.map(b => map.get(b.id) ?? b)
             })
           }
         } else if (data.type === 'complete') {
@@ -108,6 +111,12 @@ export default function Home() {
           throw new Error(data.message)
         }
       }
+    }
+
+    // reader.read() có thể trả về done:true thay vì throw khi fetch bị abort —
+    // kiểm tra signal để đảm bảo chuyển đúng sang 'paused'
+    if (signal.aborted) {
+      throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
     }
   }
 
@@ -260,10 +269,13 @@ export default function Home() {
         {/* Header */}
         <header>
           <h1 className="text-3xl font-bold text-white tracking-tight">
-            📖 Dịch Tài Liệu EPUB / PDF
+            📖 DỊCH SÁCH SONG NGỮ
           </h1>
           <p className="text-gray-400 mt-1 text-sm">
             Dịch sang tiếng Việt · Giữ nguyên layout · DeepSeek · Gemini · OpenAI
+          </p>
+          <p className="text-gray-500 mt-0.5 text-sm">
+            Tác giả: Trần Trí Nhân
           </p>
         </header>
 

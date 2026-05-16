@@ -20,7 +20,8 @@ type ProgressCallback = (
 export async function translateBlocks(
   blocks: DocumentBlock[],
   config: TranslationConfig,
-  onProgress: ProgressCallback
+  onProgress: ProgressCallback,
+  signal?: AbortSignal
 ): Promise<DocumentBlock[]> {
   // Code blocks are never translated
   const translatableBlocks = blocks.filter(b => b.type !== 'code' && b.type !== 'image')
@@ -29,11 +30,13 @@ export async function translateBlocks(
   let completed = 0
 
   for (let i = 0; i < chunks.length; i++) {
+    if (signal?.aborted) break
+
     const chunk = chunks[i]
     const contextBefore = i > 0 ? chunks[i - 1][chunks[i - 1].length - 1]?.originalText : undefined
     const contextAfter = i < chunks.length - 1 ? chunks[i + 1][0]?.originalText : undefined
 
-    const translated = await translateChunkWithRetry(chunk, contextBefore, contextAfter, config)
+    const translated = await translateChunkWithRetry(chunk, contextBefore, contextAfter, config, 0, signal)
 
     for (const t of translated) {
       const target = result.find(b => b.id === t.id)
@@ -56,14 +59,17 @@ async function translateChunkWithRetry(
   contextBefore: string | undefined,
   contextAfter: string | undefined,
   config: TranslationConfig,
-  attempt = 0
+  attempt = 0,
+  signal?: AbortSignal
 ): Promise<TranslatedItem[]> {
   try {
-    return await callTranslationAPI(chunk, contextBefore, contextAfter, config)
+    return await callTranslationAPI(chunk, contextBefore, contextAfter, config, signal)
   } catch (err) {
+    // AbortError không retry — trả lỗi lên để dừng vòng lặp
+    if (err instanceof Error && err.name === 'AbortError') throw err
     if (attempt < MAX_RETRIES) {
       await delay(RETRY_DELAY_MS * (attempt + 1))
-      return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1)
+      return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1, signal)
     }
     // Fallback: mark as untranslated rather than crash the whole document
     console.error('Translation chunk failed after retries:', err)
@@ -75,7 +81,8 @@ async function callTranslationAPI(
   chunk: DocumentBlock[],
   contextBefore: string | undefined,
   contextAfter: string | undefined,
-  config: TranslationConfig
+  config: TranslationConfig,
+  signal?: AbortSignal
 ): Promise<TranslatedItem[]> {
   const prompt = buildPrompt(chunk, contextBefore, contextAfter, config.cefrAnnotation)
   let rawText: string
@@ -90,22 +97,28 @@ async function callTranslationAPI(
       config.model ||
       (config.provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini')
 
-    const res = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.2,
-    })
+    const res = await client.chat.completions.create(
+      {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      },
+      { signal }
+    )
     rawText = res.choices[0].message.content || '{}'
   } else if (config.provider === 'claude') {
     const { default: Anthropic } = await import('@anthropic-ai/sdk')
     const client = new Anthropic({ apiKey: config.apiKey })
     const model = config.model || 'claude-sonnet-4-6'
-    const res = await client.messages.create({
-      model,
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: prompt + '\n\nChỉ trả về JSON thuần túy, không có markdown hay giải thích thêm.' }],
-    })
+    const res = await client.messages.create(
+      {
+        model,
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: prompt + '\n\nChỉ trả về JSON thuần túy, không có markdown hay giải thích thêm.' }],
+      },
+      { signal }
+    )
     rawText = res.content[0].type === 'text' ? res.content[0].text : '{}'
   } else {
     // Gemini
@@ -115,7 +128,7 @@ async function callTranslationAPI(
       model: config.model || 'gemini-3.1-flash-lite',
       generationConfig: { responseMimeType: 'application/json' },
     })
-    const res = await model.generateContent(prompt)
+    const res = await model.generateContent(prompt, { signal })
     rawText = res.response.text()
   }
 
