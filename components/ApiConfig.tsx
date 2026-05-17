@@ -14,7 +14,7 @@ const PROVIDERS: { value: AIProvider; label: string; models: string[]; placehold
   {
     value: 'gemini',
     label: 'Gemini',
-    models: ['gemini-3.1-flash-lite', 'gemini-3-flash-preview'],
+    models: ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'],
     placeholder: 'AIza...',
     envKey: 'GEMINI_API_KEY',
   },
