@@ -154,6 +154,27 @@ export default function Home() {
   const [librarySearch, setLibrarySearch] = useState('')
   const [libraryFilter, setLibraryFilter] = useState<'all' | 'favorites'>('all')
   const [toastMsg, setToastMsg] = useState<string | null>(null)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('dich-sach-theme') as 'light' | 'dark' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else {
+      setTheme('light')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme')
+      document.documentElement.classList.remove('dark')
+    } else {
+      document.documentElement.classList.remove('light-theme')
+      document.documentElement.classList.add('dark')
+    }
+    localStorage.setItem('dich-sach-theme', theme)
+  }, [theme])
 
   const [translatingBookId, setTranslatingBookId] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
@@ -764,9 +785,18 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-4 py-10 relative z-10 space-y-8">
         {/* Header */}
-        <header className="text-center md:text-left border-b border-white/5 pb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-blue-300 font-medium mb-3 backdrop-blur-md">
-            ⚡ Tối ưu dịch thuật song ngữ với Gemini 2.5 Flash
+        <header className="relative text-center md:text-left border-b border-white/5 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-blue-300 font-medium backdrop-blur-md self-center sm:self-start">
+              ⚡ Tối ưu dịch thuật song ngữ với Gemini 2.5 Flash
+            </div>
+            <button
+              onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+              className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all active:scale-95 self-center sm:self-auto text-gray-300 hover:text-white"
+              title="Chuyển đổi giao diện Sáng / Tối"
+            >
+              {theme === 'light' ? '🌙 Chế độ tối' : '☀️ Chế độ sáng'}
+            </button>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 tracking-tight">
             📖 DỊCH SÁCH SONG NGỮ
@@ -1118,9 +1148,30 @@ export default function Home() {
             {/* Chapter Selector Section */}
             {blocks.length > 0 && (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
-                  <p className="text-gray-400 text-xs mt-1 font-light">
+                <div className="border-b border-white/5 pb-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-sm font-bold text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
+                    {blocks.length > 0 && (() => {
+                      const chs = getChapters(blocks)
+                      const allSelected = chs.length > 0 && chs.every(ch => selectedChapters.includes(ch.href))
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (allSelected) {
+                              setSelectedChapters([])
+                            } else {
+                              setSelectedChapters(chs.map(ch => ch.href))
+                            }
+                          }}
+                          className="text-[11px] px-2.5 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 rounded-lg border border-blue-500/20 transition-all font-semibold active:scale-95 shrink-0"
+                        >
+                          {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả các chương'}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                  <p className="text-gray-400 text-xs mt-1.5 font-light">
                     Chọn các chương bạn muốn dịch. Bạn có thể xóa bản dịch lỗi của một chương cụ thể để dịch lại.
                   </p>
                 </div>

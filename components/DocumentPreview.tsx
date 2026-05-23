@@ -37,11 +37,13 @@ function BlockRow({
   bilingual,
   readerMode,
   onTextSelect,
+  onWordDoubleClick,
 }: {
   block: DocumentBlock
   bilingual: boolean
   readerMode: boolean
   onTextSelect: (block: DocumentBlock) => void
+  onWordDoubleClick: (word: string, block: DocumentBlock) => void
 }) {
   const isCode = block.type === 'code'
   const isUntranslated = !block.translatedText && !isCode
@@ -54,41 +56,57 @@ function BlockRow({
     }
   }
 
+  // Handle double-clicking on a word to prompt lookup
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const sel = window.getSelection()
+    if (!sel) return
+    const text = sel.toString().trim()
+    
+    // Validate that a single word or small phrase is selected
+    if (text && text.length < 50 && /^[a-zA-Z0-9\s'’-]+$/.test(text)) {
+      onWordDoubleClick(text, block)
+    }
+  }
+
   // Handle bilingual rendering
   if (bilingual && block.translatedText) {
     const isHeading = block.type === 'heading'
     const lvl = block.style.level || 1
 
     if (readerMode) {
-      // Reader Mode Layout: Serif font, indented paragraphs, clean spacing
+      // Vintage Book Page Layout (Bilingual)
       return (
         <div 
-          className="py-4 border-b border-white/5 group select-text"
+          className="py-3 border-b border-black/5 group select-text"
           onMouseUp={() => onTextSelect(block)}
         >
           {isHeading ? (
             <h3 
               onClick={handleToggleReveal}
-              className={`font-serif font-bold text-white tracking-tight cursor-pointer hover:text-blue-400 transition-colors leading-tight ${
-                lvl === 1 ? 'text-2xl mt-6 mb-2' : lvl === 2 ? 'text-xl mt-4 mb-2' : 'text-lg mt-3 mb-1'
+              onDoubleClick={handleDoubleClick}
+              className={`font-serif font-bold text-[#2d1f10] tracking-tight cursor-pointer hover:text-blue-700 transition-colors leading-tight ${
+                lvl === 1 ? 'text-xl mt-4 mb-1.5' : lvl === 2 ? 'text-lg mt-3 mb-1.5' : 'text-base mt-2 mb-1'
               }`}
             >
               {block.translatedText}
             </h3>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <p 
                 onClick={handleToggleReveal}
-                className="font-serif text-[17px] leading-relaxed text-gray-300 cursor-pointer hover:text-blue-300 transition-colors"
+                onDoubleClick={handleDoubleClick}
+                className="font-serif text-[15px] leading-relaxed text-[#382613] cursor-pointer hover:text-blue-800 transition-colors select-text"
               >
                 {block.originalText}
               </p>
               <p 
                 onClick={handleToggleReveal}
-                className={`font-serif text-[15px] leading-relaxed text-indigo-300/90 whitespace-pre-wrap transition-all duration-300 origin-top transform ${
+                className={`font-serif text-[14px] leading-relaxed text-indigo-900/85 italic whitespace-pre-wrap transition-all duration-300 origin-top transform ${
                   revealed 
-                    ? 'opacity-100 scale-100 max-h-[1000px] blur-0' 
-                    : 'opacity-10 scale-[0.99] max-h-[30px] blur-[3px] select-none'
+                    ? 'opacity-100 scale-100 max-h-[500px] blur-0' 
+                    : 'opacity-10 scale-[0.99] max-h-[22px] blur-[3px] select-none'
                 }`}
               >
                 {block.translatedText}
@@ -99,7 +117,7 @@ function BlockRow({
       )
     }
 
-    // Block Mode Layout (Bilingual)
+    // Block Mode Layout (Bilingual - when reader mode is OFF)
     return (
       <div 
         className="bg-white/5 border border-white/10 rounded-xl p-4 shadow-md space-y-2 select-text hover:border-white/15 transition-all"
@@ -109,10 +127,13 @@ function BlockRow({
           <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">
             {TYPE_BADGE[block.type] || 'P'}{lvl ? lvl : ''}
           </span>
-          <span className="italic">💡 Click vào câu để xem bản dịch</span>
+          <span className="italic">💡 Nhấp đúp vào từ tiếng Anh để tra nghĩa nhanh</span>
         </div>
         <div className="space-y-1.5 cursor-pointer" onClick={handleToggleReveal}>
-          <p className="text-sm text-gray-400 font-light leading-relaxed whitespace-pre-wrap">
+          <p 
+            onDoubleClick={handleDoubleClick}
+            className="text-sm text-gray-400 font-light leading-relaxed whitespace-pre-wrap select-text"
+          >
             {block.originalText}
           </p>
           <p 
@@ -133,20 +154,26 @@ function BlockRow({
   if (readerMode) {
     if (isCode) {
       return (
-        <pre className="bg-black/30 border border-white/5 rounded-lg p-4 font-mono text-xs text-green-300 my-4 overflow-x-auto">
+        <pre className="bg-black/5 border border-black/10 rounded-lg p-3 font-mono text-xs text-emerald-800 my-3 overflow-x-auto">
           <code>{block.originalText}</code>
         </pre>
       )
     }
     const lvl = block.style.level || 1
     return (
-      <div className="py-3 font-serif">
+      <div className="py-2.5 font-serif select-text">
         {block.type === 'heading' ? (
-          <h3 className={`font-bold text-white ${lvl === 1 ? 'text-2xl mt-6' : lvl === 2 ? 'text-xl mt-4' : 'text-lg mt-3'}`}>
+          <h3 
+            onDoubleClick={handleDoubleClick}
+            className={`font-bold text-[#2d1f10] ${lvl === 1 ? 'text-xl mt-4' : lvl === 2 ? 'text-lg mt-3' : 'text-base mt-2'}`}
+          >
             {block.translatedText || block.originalText}
           </h3>
         ) : (
-          <p className="text-[17px] leading-relaxed text-gray-300">
+          <p 
+            onDoubleClick={handleDoubleClick}
+            className="text-[15px] leading-relaxed text-[#382613] select-text"
+          >
             {block.translatedText || block.originalText}
           </p>
         )}
@@ -171,7 +198,8 @@ function BlockRow({
           <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Gốc</span>
         </div>
         <p
-          className={`text-gray-300 text-sm leading-relaxed whitespace-pre-wrap ${
+          onDoubleClick={handleDoubleClick}
+          className={`text-gray-300 text-sm leading-relaxed whitespace-pre-wrap select-text ${
             block.type === 'heading' ? 'font-bold text-white' : ''
           } ${isCode ? 'font-mono text-xs text-green-300 bg-black/20 p-2 rounded border border-white/5' : ''}`}
         >
@@ -217,25 +245,58 @@ export default function DocumentPreview({
   onBackToLibrary,
 }: Props) {
   const [filter, setFilter] = useState<'all' | 'translated' | 'untranslated'>('all')
-  const [readerMode, setReaderMode] = useState(false)
+  const [readerMode, setReaderMode] = useState(true) // Default to reader mode!
   const [page, setPage] = useState(initialPage)
   const [selection, setSelection] = useState<SelectionInfo | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const selectionTimer = useRef<NodeJS.Timeout | null>(null)
 
-  // Đồng bộ tiến trình đọc dở khi trang thay đổi
+  // Vintage Book Title
+  const [bookTitle, setBookTitle] = useState('Đọc Sách Song Ngữ')
+
+  // Animation Flip State
+  const [flipClass, setFlipClass] = useState('')
+
+  // Double Click Dictionary States
+  const [lookupWord, setLookupWord] = useState<string | null>(null)
+  const [lookupResult, setLookupResult] = useState<{ word: string; ipa: string; meaning: string } | null>(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+  const [lookupContext, setLookupContext] = useState<DocumentBlock | null>(null)
+
+  // Fetch real book title from Library
+  useEffect(() => {
+    if (bookId) {
+      try {
+        const savedBooks = localStorage.getItem('dich-sach-library-books')
+        if (savedBooks) {
+          const parsed = JSON.parse(savedBooks)
+          const book = parsed.find((b: any) => b.id === bookId)
+          if (book) {
+            setBookTitle(book.title)
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching book metadata:', err)
+      }
+    }
+  }, [bookId])
+
+  // Synchronize reading progress on page change
   useEffect(() => {
     if (onPageChange) {
       onPageChange(page)
     }
   }, [page, onPageChange])
 
-  // Cập nhật lại số trang khi mở sách mới
+  // Reset page index on opening a new book
   useEffect(() => {
     setPage(initialPage)
   }, [initialPage, bookId])
 
-  const PER_PAGE = readerMode ? 15 : 20
+  // Number of blocks per book page (fits beautiful layout perfectly!)
+  const PER_BOOK_PAGE = 6
+  const PER_PAGE_DEFAULT = 20
 
   const filtered = blocks.filter(b => {
     if (filter === 'translated') return !!b.translatedText || b.type === 'code'
@@ -243,21 +304,91 @@ export default function DocumentPreview({
     return true
   })
 
-  const totalPages = Math.ceil(filtered.length / PER_PAGE)
-  const visible = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  // Book pages count
+  const totalPages = Math.ceil(filtered.length / PER_BOOK_PAGE)
   const untranslatedCount = blocks.filter(b => !b.translatedText && b.type !== 'code').length
+
+  // Visible lists in standard list view
+  const visible = filtered.slice((page - 1) * PER_PAGE_DEFAULT, page * PER_PAGE_DEFAULT)
+  const standardTotalPages = Math.ceil(filtered.length / PER_PAGE_DEFAULT)
+
+  // Left & Right visible pages in Book View
+  const leftVisible = filtered.slice((page - 1) * PER_BOOK_PAGE, page * PER_BOOK_PAGE)
+  const rightVisible = filtered.slice(page * PER_BOOK_PAGE, (page + 1) * PER_BOOK_PAGE)
+
+  // Get active chapter heading helper
+  const getActiveChapter = (indexLimit: number) => {
+    for (let i = indexLimit; i >= 0; i--) {
+      if (filtered[i]?.type === 'heading') {
+        return filtered[i].originalText
+      }
+    }
+    return 'Phần mở đầu'
+  }
+
+  // Handle page turns with beautiful 3D flip animation
+  const handleNextPage = () => {
+    if (page + 1 >= totalPages || flipClass !== '') return
+    setFlipClass('animate-flip-next')
+    setTimeout(() => {
+      setPage(p => Math.min(totalPages, p + 2))
+      setFlipClass('')
+    }, 450)
+  }
+
+  const handlePrevPage = () => {
+    if (page === 1 || flipClass !== '') return
+    setFlipClass('animate-flip-prev')
+    setTimeout(() => {
+      setPage(p => Math.max(1, p - 2))
+      setFlipClass('')
+    }, 450)
+  }
+
+  // Double click lookup logic
+  const handleWordDoubleClick = async (word: string, block: DocumentBlock) => {
+    const cleanedWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"“”’‘]/g, "").trim()
+    if (!cleanedWord) return
+    
+    setLookupWord(cleanedWord)
+    setLookupContext(block)
+    setLookupLoading(true)
+    setLookupError(null)
+    setLookupResult(null)
+
+    try {
+      const savedConfig = localStorage.getItem('dich-viet-api-config')
+      const config = savedConfig ? JSON.parse(savedConfig) : null
+
+      const res = await fetch('/api/dict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: cleanedWord, config }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Lỗi kết nối hoặc API hết lượt truy vấn')
+      }
+
+      const data = await res.json()
+      setLookupResult(data)
+    } catch (err: any) {
+      setLookupError(err.message || 'Không thể tra từ điển AI')
+    } finally {
+      setLookupLoading(false)
+    }
+  }
 
   // Listen to selection changes to capture highlighted words
   const handleTextSelection = (block: DocumentBlock) => {
     if (selectionTimer.current) clearTimeout(selectionTimer.current)
 
-    // Delay slightly to let the selection complete
     selectionTimer.current = setTimeout(() => {
       const sel = window.getSelection()
       if (!sel || sel.rangeCount === 0) return
 
       const text = sel.toString().trim()
-      // Limit selection length to a word or short phrase (1 - 5 words)
       if (!text || text.length > 60 || !/^[a-zA-Z0-9\s'’-]+$/.test(text)) {
         setSelection(null)
         return
@@ -279,7 +410,6 @@ export default function DocumentPreview({
   // Close selection bubble on click outside
   useEffect(() => {
     const handleDocumentClick = () => {
-      // Clear selection bubble softly
       setTimeout(() => {
         const sel = window.getSelection()
         if (!sel || !sel.toString().trim()) {
@@ -307,7 +437,6 @@ export default function DocumentPreview({
       triggerToast(`⚠️ Từ này đã tồn tại trong Sổ tay của bạn.`)
     }
 
-    // Clear selection bubble
     setSelection(null)
     window.getSelection()?.removeAllRanges()
   }
@@ -319,16 +448,109 @@ export default function DocumentPreview({
 
   return (
     <div className="space-y-5 relative">
-      {/* Floating Selection Bubble */}
+      {/* Floating Selection Bubble (Mouse drag select) */}
       {selection && (
         <button
           onClick={handleSaveSelection}
-          className="absolute z-50 px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-500/30 flex items-center gap-1.5 transform -translate-x-1/2 -translate-y-full border border-blue-400/20 transition-all scale-100 animate-in fade-in zoom-in duration-150"
+          className="absolute z-40 px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-500/30 flex items-center gap-1.5 transform -translate-x-1/2 -translate-y-full border border-blue-400/20 transition-all scale-100 animate-in fade-in zoom-in duration-150"
           style={{ left: `${selection.x}px`, top: `${selection.y}px` }}
         >
           <span>💾</span>
           <span>Lưu từ vựng</span>
         </button>
+      )}
+
+      {/* Double Click Dictionary Lookup Popup */}
+      {lookupWord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm dict-popup-overlay">
+          <div className="relative w-full max-w-sm rounded-3xl p-6 border border-indigo-100/30 dict-popup-content space-y-4">
+            {/* Close Button */}
+            <button
+              onClick={() => setLookupWord(null)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              ✕
+            </button>
+
+            {lookupLoading ? (
+              <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                <span className="text-3xl animate-spin">🌀</span>
+                <p className="text-xs text-slate-500 font-light">Đang tra cứu từ điển AI...</p>
+              </div>
+            ) : lookupError ? (
+              <div className="py-4 space-y-3">
+                <div className="text-center text-3xl">⚠️</div>
+                <p className="text-sm text-red-500 text-center font-medium leading-relaxed">{lookupError}</p>
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => handleWordDoubleClick(lookupWord, lookupContext!)}
+                    className="px-5 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 transition-all active:scale-95 shadow-md shadow-indigo-600/10"
+                  >
+                    Thử lại
+                  </button>
+                </div>
+              </div>
+            ) : lookupResult ? (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase tracking-wider font-mono bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
+                    Từ vựng mới
+                  </span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <h4 className="text-2xl font-serif font-bold text-slate-900 leading-none">
+                      {lookupResult.word}
+                    </h4>
+                    <button
+                      onClick={() => {
+                        const utterance = new SpeechSynthesisUtterance(lookupResult.word)
+                        utterance.lang = 'en-US'
+                        window.speechSynthesis.speak(utterance)
+                      }}
+                      className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors active:scale-90"
+                      title="Phát âm tiếng Anh"
+                    >
+                      🔊
+                    </button>
+                  </div>
+                  {lookupResult.ipa && (
+                    <p className="text-sm font-mono text-indigo-600 font-semibold">
+                      {lookupResult.ipa}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100/50">
+                  <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider block mb-1">Nghĩa tiếng Việt</span>
+                  <p className="text-sm text-slate-700 leading-relaxed font-serif">
+                    {lookupResult.meaning}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (lookupContext) {
+                      const added = addVocabItem(
+                        lookupResult.word, 
+                        lookupContext.originalText, 
+                        lookupContext.translatedText || lookupContext.originalText
+                      )
+                      if (added) {
+                        triggerToast(`💾 Đã lưu từ: "${lookupResult.word}" vào Sổ tay!`)
+                      } else {
+                        triggerToast(`⚠️ Từ này đã tồn tại trong Sổ tay của bạn.`)
+                      }
+                      setLookupWord(null)
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-2xl border border-blue-400/20 shadow-lg shadow-blue-500/15 transition-all active:scale-95"
+                >
+                  <span>📓</span>
+                  <span>Thêm vào Sổ tay từ vựng</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       )}
 
       {/* Floating Success Toast */}
@@ -371,7 +593,7 @@ export default function DocumentPreview({
                 : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/5'
             }`}
           >
-            {readerMode ? '📖 Chế độ đọc (ON)' : '📖 Chế độ đọc'}
+            {readerMode ? '📖 Chế độ đọc cổ điển (ON)' : '📖 Chế độ đọc cổ điển'}
           </button>
 
           {/* Filter options (Only in Block Mode) */}
@@ -398,51 +620,167 @@ export default function DocumentPreview({
           <span>💡</span>
           <span>
             {readerMode 
-              ? 'Mẹo: Nhấp vào câu tiếng Anh để ẩn/hiện bản dịch tiếng Việt tương ứng bên dưới. Bôi đen từ vựng tiếng Anh để lưu nhanh.'
-              : 'Chế độ xem bảng: Bạn có thể click vào bất kỳ câu tiếng Anh nào để làm sáng rõ bản dịch tiếng Việt tương ứng.'
+              ? 'Chế độ lật trang sách cổ điển: Nhấp đúp vào bất kỳ từ tiếng Anh nào để xem nghĩa và phiên âm IPA. Bôi đen để lưu cụm từ.'
+              : 'Chế độ cuộn dọc: Bạn có thể click vào câu tiếng Anh để làm sáng rõ bản dịch tiếng Việt tương ứng.'
             }
           </span>
         </div>
       )}
 
       {/* Reader Layout container */}
-      <div className={`transition-all duration-300 ${readerMode ? 'max-w-2xl mx-auto px-6 py-4 bg-[#0d1117]/60 rounded-3xl border border-white/5 shadow-inner' : 'space-y-4'}`}>
-        {visible.length === 0 ? (
-          <p className="text-center text-gray-500 py-10 font-light text-sm">Không tìm thấy nội dung phù hợp bộ lọc.</p>
-        ) : (
-          visible.map(block => (
-            <BlockRow
-              key={block.id}
-              block={block}
-              bilingual={bilingual}
-              readerMode={readerMode}
-              onTextSelect={handleTextSelection}
-            />
-          ))
-        )}
-      </div>
+      {readerMode ? (
+        <div className="book-wrapper">
+          <div className="real-book">
+            {/* Spine Crease shadow fold */}
+            <div className="book-spine" />
+            
+            {/* Shaded multi-page stacked paper edges */}
+            <div className="book-stack-left" />
+            <div className="book-stack-right" />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-4 border-t border-white/5">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
-          >
-            ← Trước
-          </button>
-          <span className="text-gray-400 text-xs font-mono font-medium">
-            Trang {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
-          >
-            Tiếp →
-          </button>
+            {/* LEFT BOOK PAGE */}
+            <div className={`real-book-page real-book-page-left ${flipClass}`}>
+              {/* Corner Ornaments */}
+              <div className="vintage-ornament vintage-ornament-tl" />
+              <div className="vintage-ornament vintage-ornament-bl" />
+              
+              {/* Running Header */}
+              <div className="vintage-page-header">
+                {bookTitle}
+              </div>
+
+              {/* Page Content blocks list */}
+              <div className="flex-1 flex flex-col justify-start space-y-3 pt-3 select-text">
+                {leftVisible.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm text-[#7d6b58] italic font-serif">
+                    Kết thúc nội dung sách.
+                  </div>
+                ) : (
+                  leftVisible.map(block => (
+                    <BlockRow
+                      key={block.id}
+                      block={block}
+                      bilingual={bilingual}
+                      readerMode={true}
+                      onTextSelect={handleTextSelection}
+                      onWordDoubleClick={handleWordDoubleClick}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Footer containing Page Number aligned near Spine fold */}
+              <div className="vintage-page-footer right-[20px] flex justify-end">
+                <span>{page * 2 - 1}</span>
+              </div>
+            </div>
+
+            {/* RIGHT BOOK PAGE */}
+            <div className={`real-book-page real-book-page-right ${flipClass}`}>
+              {/* Corner Ornaments */}
+              <div className="vintage-ornament vintage-ornament-tr" />
+              <div className="vintage-ornament vintage-ornament-br" />
+
+              {/* Running Header */}
+              <div className="vintage-page-header">
+                {getActiveChapter(Math.min(filtered.length - 1, page * PER_BOOK_PAGE))}
+              </div>
+
+              {/* Page Content blocks list */}
+              <div className="flex-1 flex flex-col justify-start space-y-3 pt-3 select-text">
+                {rightVisible.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm text-[#7d6b58] italic font-serif">
+                    Kết thúc nội dung sách.
+                  </div>
+                ) : (
+                  rightVisible.map(block => (
+                    <BlockRow
+                      key={block.id}
+                      block={block}
+                      bilingual={bilingual}
+                      readerMode={true}
+                      onTextSelect={handleTextSelection}
+                      onWordDoubleClick={handleWordDoubleClick}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Footer containing Page Number aligned near Spine fold */}
+              <div className="vintage-page-footer left-[20px] flex justify-start">
+                <span>{page * 2}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Book navigation control buttons */}
+          <div className="flex justify-between items-center mt-5 max-w-[1080px] mx-auto px-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={page === 1 || flipClass !== ''}
+              className="px-6 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed border border-white/5 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md"
+            >
+              <span>◀</span>
+              <span>Trang trước</span>
+            </button>
+
+            <span className="text-xs text-gray-400 font-mono font-bold">
+              Trang {page * 2 - 1} - {page * 2} / {totalPages * 2}
+            </span>
+
+            <button
+              onClick={handleNextPage}
+              disabled={page + 1 >= totalPages || rightVisible.length === 0 || flipClass !== ''}
+              className="px-6 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed border border-white/5 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md"
+            >
+              <span>Trang tiếp</span>
+              <span>▶</span>
+            </button>
+          </div>
         </div>
+      ) : (
+        /* Original vertical scrolling list mode */
+        <>
+          <div className="space-y-4">
+            {visible.length === 0 ? (
+              <p className="text-center text-gray-500 py-10 font-light text-sm">Không tìm thấy nội dung phù hợp bộ lọc.</p>
+            ) : (
+              visible.map(block => (
+                <BlockRow
+                  key={block.id}
+                  block={block}
+                  bilingual={bilingual}
+                  readerMode={false}
+                  onTextSelect={handleTextSelection}
+                  onWordDoubleClick={handleWordDoubleClick}
+                />
+              ))
+            )}
+          </div>
+
+          {/* List pagination */}
+          {standardTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 pt-4 border-t border-white/5">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
+              >
+                ← Trước
+              </button>
+              <span className="text-gray-400 text-xs font-mono font-medium">
+                Trang {page} / {standardTotalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(standardTotalPages, p + 1))}
+                disabled={page === standardTotalPages}
+                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
+              >
+                Tiếp →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

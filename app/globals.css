@@ -3,10 +3,498 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  
+  /* ==========================================================================
+     LIGHT THEME (Bright and Fresh Aesthetic)
+     ========================================================================== */
+  --color-slate-950: 248 250 252; /* slate-50 */
+  --color-slate-900: 241 245 249; /* slate-100 */
+  --color-slate-800: 226 232 240; /* slate-200 */
+  --color-slate-700: 203 213 225; /* slate-300 */
+  --color-slate-600: 148 163 184; /* slate-400 */
+  --color-slate-500: 100 116 139; /* slate-500 */
+  --color-slate-400: 71 85 105;   /* slate-600 */
+  --color-slate-300: 51 65 85;    /* slate-700 */
+  --color-slate-200: 30 41 59;    /* slate-800 */
+  --color-slate-100: 15 23 42;    /* slate-900 */
+  
+  --color-gray-950: 249 250 251;  /* gray-50 */
+  --color-gray-900: 255 255 255;  /* white */
+  --color-gray-800: 243 244 246;  /* gray-100 */
+  --color-gray-700: 229 231 235;  /* gray-200 */
+  --color-gray-600: 209 213 219;  /* gray-300 */
+  --color-gray-500: 156 163 175;  /* gray-400 */
+  --color-gray-400: 107 114 128;  /* gray-500 */
+  --color-gray-300: 75 85 99;     /* gray-600 */
+  --color-gray-200: 55 65 81;     /* gray-700 */
+  --color-gray-100: 31 41 55;     /* gray-800 */
+  
+  --color-zinc-950: 243 244 246;  /* gray-100 */
+
+  /* Extra Custom Variables for precise Light-Theme tuning */
+  --theme-bg-app: rgb(248, 250, 252);
+  --theme-bg-card: rgba(255, 255, 255, 0.85);
+  --theme-bg-inner: rgb(241, 245, 249);
+  --theme-bg-hover: rgb(226, 232, 240);
+  --theme-border: rgba(226, 232, 240, 0.85);
+  --theme-text-primary: rgb(15, 23, 42);
+  --theme-text-secondary: rgb(71, 85, 105);
+  --theme-text-muted: rgb(100, 116, 139);
+  --theme-text-hint: rgb(148, 163, 184);
 }
 
+/* ==========================================================================
+   DARK THEME (Sleek Dark Mode Aesthetic)
+   ========================================================================== */
+.dark {
+  color-scheme: dark;
+  
+  --color-slate-950: 2 6 23;      /* slate-955 */
+  --color-slate-900: 15 23 42;    /* slate-900 */
+  --color-slate-800: 30 41 59;    /* slate-800 */
+  --color-slate-700: 51 65 85;    /* slate-700 */
+  --color-slate-600: 71 85 105;   /* slate-600 */
+  --color-slate-500: 100 116 139; /* slate-500 */
+  --color-slate-400: 148 163 184; /* slate-400 */
+  --color-slate-300: 203 213 225; /* slate-300 */
+  --color-slate-200: 226 232 240; /* slate-200 */
+  --color-slate-100: 241 245 249; /* slate-100 */
+  
+  --color-gray-950: 3 7 18;       /* gray-955 */
+  --color-gray-900: 17 24 39;     /* gray-900 */
+  --color-gray-800: 31 41 55;     /* gray-800 */
+  --color-gray-700: 55 65 81;     /* gray-700 */
+  --color-gray-600: 75 85 99;     /* gray-600 */
+  --color-gray-500: 107 114 128;  /* gray-500 */
+  --color-gray-400: 156 163 175;  /* gray-400 */
+  --color-gray-300: 209 213 219;  /* gray-300 */
+  --color-gray-200: 229 231 235;  /* gray-200 */
+  --color-gray-100: 243 244 246;  /* gray-100 */
+  
+  --color-zinc-950: 9 9 11;       /* zinc-950 */
+}
+
+/* Scrollbars configuration */
 * {
   scrollbar-width: thin;
   scrollbar-color: #374151 transparent;
 }
+
+.light-theme * {
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* ==========================================================================
+   SMART LIGHT THEME OVERRIDES
+   ========================================================================== */
+
+/* App background */
+.light-theme main {
+  background: radial-gradient(ellipse at top, rgb(239, 246, 255), rgb(248, 250, 252), rgb(238, 242, 255)) !important;
+}
+
+/* App Title dynamic color gradient */
+.light-theme h1.text-transparent {
+  background-image: linear-gradient(to right, #1d4ed8, #4f46e5, #7c3aed) !important;
+}
+
+/* Light Mode Glassmorphic Cards shadow & background overrides */
+.light-theme .bg-white\/5 {
+  background-color: var(--theme-bg-card) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.05), 0 4px 6px -4px rgba(148, 163, 184, 0.05) !important;
+}
+
+.light-theme .bg-gray-900 {
+  background-color: var(--theme-bg-card) !important;
+  box-shadow: 0 10px 15px -3px rgba(148, 163, 184, 0.05), 0 4px 6px -4px rgba(148, 163, 184, 0.05) !important;
+}
+
+.light-theme .bg-gray-950\/40,
+.light-theme .bg-gray-950\/30,
+.light-theme .bg-gray-950\/20,
+.light-theme .bg-gray-900\/30,
+.light-theme .bg-black\/35,
+.light-theme .bg-black\/30,
+.light-theme .bg-black\/25,
+.light-theme .bg-black\/20 {
+  background-color: var(--theme-bg-inner) !important;
+}
+
+.light-theme .bg-gray-800 {
+  background-color: var(--theme-bg-inner) !important;
+}
+
+.light-theme .bg-gray-700 {
+  background-color: var(--theme-bg-hover) !important;
+}
+
+.light-theme .hover\:bg-gray-800:hover,
+.light-theme .hover\:bg-white\/5:hover,
+.light-theme .hover\:bg-white\/10:hover {
+  background-color: var(--theme-bg-hover) !important;
+}
+
+/* Specific component overrides */
+.light-theme .bg-\[\#0d1117\]\/60 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 2px 4px 0 rgba(148, 163, 184, 0.06) !important;
+  border-color: var(--theme-border) !important;
+}
+
+/* Ambient glows */
+.light-theme .bg-blue-500\/10 {
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+.light-theme .bg-purple-500\/10 {
+  background-color: rgba(168, 85, 247, 0.05) !important;
+}
+
+/* Form input styling */
+.light-theme input,
+.light-theme select,
+.light-theme textarea {
+  color: var(--theme-text-primary) !important;
+  background-color: #ffffff !important;
+  border-color: var(--theme-border) !important;
+}
+
+.light-theme input::placeholder {
+  color: var(--theme-text-hint) !important;
+}
+
+/* ==========================================================================
+   SMART TEXT WHITE TRANSLATION
+   ========================================================================== */
+
+/* Standard text-white elements change to elegant dark slate text */
+.light-theme .text-white {
+  color: var(--theme-text-primary) !important;
+}
+
+/* Keep text-white for elements that actually have strong colored backgrounds */
+.light-theme button.text-white,
+.light-theme a.text-white,
+.light-theme label.text-white,
+.light-theme .text-white.bg-blue-600,
+.light-theme .text-white.bg-purple-600,
+.light-theme .text-white.bg-green-600,
+.light-theme .text-white.bg-indigo-600,
+.light-theme .text-white.bg-gradient-to-r,
+.light-theme [class*="bg-gradient-to-"] .text-white,
+.light-theme [class*="bg-blue-600"] .text-white,
+.light-theme [class*="bg-purple-600"] .text-white,
+.light-theme [class*="bg-indigo-600"] .text-white,
+.light-theme [class*="bg-green-600"] .text-white,
+.light-theme [class*="bg-red-600"] .text-white,
+.light-theme [class*="bg-amber-600"] .text-white,
+.light-theme [class*="bg-gradient-to-"] span,
+.light-theme [class*="bg-blue-600"] span,
+.light-theme [class*="bg-purple-600"] span,
+.light-theme [class*="bg-indigo-600"] span,
+.light-theme [class*="bg-green-600"] span,
+.light-theme [class*="bg-red-600"] span,
+.light-theme [class*="bg-amber-600"] span {
+  color: #ffffff !important;
+}
+
+/* Handlers for badges & status chips in light mode */
+.light-theme .text-amber-200 { color: #b45309 !important; }
+.light-theme .text-blue-300 { color: #1d4ed8 !important; }
+.light-theme .text-green-300 { color: #15803d !important; }
+.light-theme .text-purple-300 { color: #6b21a8 !important; }
+.light-theme .text-pink-300 { color: #be185d !important; }
+
+.light-theme .bg-amber-500\/10 { background-color: rgba(245, 158, 11, 0.12) !important; border-color: rgba(245, 158, 11, 0.25) !important; }
+.light-theme .bg-blue-500\/10 { background-color: rgba(59, 130, 246, 0.12) !important; border-color: rgba(59, 130, 246, 0.25) !important; }
+.light-theme .bg-green-500\/10 { background-color: rgba(16, 185, 129, 0.12) !important; border-color: rgba(16, 185, 129, 0.25) !important; }
+.light-theme .bg-purple-500\/10 { background-color: rgba(139, 92, 246, 0.12) !important; border-color: rgba(139, 92, 246, 0.25) !important; }
+.light-theme .bg-pink-500\/10 { background-color: rgba(236, 72, 153, 0.12) !important; border-color: rgba(236, 72, 153, 0.25) !important; }
+.light-theme .bg-red-500\/10 { background-color: rgba(239, 68, 68, 0.12) !important; border-color: rgba(239, 68, 68, 0.25) !important; }
+.light-theme .bg-red-500\/15 { background-color: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.3) !important; }
+.light-theme .bg-yellow-500\/10 { background-color: rgba(245, 158, 11, 0.12) !important; border-color: rgba(245, 158, 11, 0.25) !important; }
+.light-theme .bg-yellow-500\/15 { background-color: rgba(245, 158, 11, 0.15) !important; border-color: rgba(245, 158, 11, 0.3) !important; }
+
+/* Custom Vocab Notebook styling overrides */
+.light-theme .border-indigo-500\/20 { border-color: rgba(99, 102, 241, 0.3) !important; }
+.light-theme .bg-indigo-950\/10 { background-color: rgba(99, 102, 241, 0.06) !important; }
+.light-theme .text-indigo-200 { color: #4338ca !important; }
+.light-theme .text-indigo-400 { color: #4f46e5 !important; }
+
+.light-theme .text-yellow-400 { color: #d97706 !important; }
+.light-theme .text-yellow-300 { color: #b45309 !important; }
+
+/* In Reader Mode, translation block hidden view text contrast */
+.light-theme .opacity-10.scale-\[0\.99\].max-h-\[30px\].blur-\[3px\] {
+  opacity: 0.15 !important;
+  color: rgba(99, 102, 241, 0.6) !important;
+}
+.light-theme .opacity-\[0\.08\].blur-\[4px\] {
+  opacity: 0.1 !important;
+}
+
+/* ==========================================================================
+   REAL VINTAGE OPEN-BOOK ESTHETICS
+   ========================================================================== */
+.book-wrapper {
+  background-color: #0f172a; /* Slate 900 for dark mode surroundings */
+  padding: 1.5rem;
+  border-radius: 28px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.light-theme .book-wrapper {
+  background-color: #e2e8f0; /* slate-200 for light mode surroundings */
+  box-shadow: 0 25px 60px -15px rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.real-book {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  height: 680px;
+  margin: 0 auto;
+  background-color: #faf4ea; /* warm cream/ivory paper */
+  border-radius: 12px;
+  box-shadow: 
+    0 35px 70px -15px rgba(0, 0, 0, 0.5),
+    inset 0 0 50px rgba(0, 0, 0, 0.03);
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #dcd4c4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  perspective: 1200px;
+}
+
+.light-theme .real-book {
+  background-color: #fdfaf4;
+  border-color: #e6dfd1;
+}
+
+/* Vintage running headers & ornament styles */
+.vintage-page-header {
+  font-family: Georgia, serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #6e5a47;
+  opacity: 0.6;
+  text-align: center;
+  position: absolute;
+  top: 24px;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.vintage-page-footer {
+  position: absolute;
+  bottom: 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.vintage-page-footer span {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: bold;
+  color: #7d6b58;
+  opacity: 0.8;
+  background-color: #ebdcb9;
+  border: 1.5px solid #7d6b58;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vintage Corners Ornamental border elements */
+.vintage-ornament {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  opacity: 0.22;
+  pointer-events: none;
+  background-size: contain;
+  background-repeat: no-repeat;
+  filter: sepia(0.6) hue-rotate(340deg) saturate(1.2);
+}
+
+/* Clean SVG corner ornaments matching screenshot exactly */
+.vintage-ornament-tl {
+  top: 12px;
+  left: 12px;
+  border-top: 1.5px solid #4a3728;
+  border-left: 1.5px solid #4a3728;
+  border-top-left-radius: 6px;
+}
+.vintage-ornament-tr {
+  top: 12px;
+  right: 12px;
+  border-top: 1.5px solid #4a3728;
+  border-right: 1.5px solid #4a3728;
+  border-top-right-radius: 6px;
+}
+.vintage-ornament-bl {
+  bottom: 12px;
+  left: 12px;
+  border-bottom: 1.5px solid #4a3728;
+  border-left: 1.5px solid #4a3728;
+  border-bottom-left-radius: 6px;
+}
+.vintage-ornament-br {
+  bottom: 12px;
+  right: 12px;
+  border-bottom: 1.5px solid #4a3728;
+  border-right: 1.5px solid #4a3728;
+  border-bottom-right-radius: 6px;
+}
+
+/* Spine fold shadow */
+.book-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 40px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(0, 0, 0, 0.16) 46%,
+    rgba(0, 0, 0, 0.26) 50%,
+    rgba(0, 0, 0, 0.16) 54%,
+    rgba(0, 0, 0, 0.04) 75%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* Paper page stack depth */
+.book-stack-left {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.02) 40%, rgba(0, 0, 0, 0) 100%);
+  border-right: 1px solid rgba(0,0,0,0.03);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.book-stack-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.02) 40%, rgba(0, 0, 0, 0) 100%);
+  border-left: 1px solid rgba(0,0,0,0.03);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Page inner sheets stack layout */
+.real-book-page {
+  flex: 1;
+  height: 100%;
+  padding: 4rem 2.8rem 4rem 2.8rem;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  z-index: 5;
+  scrollbar-width: none; /* Hide scrollbars for true book feel */
+}
+
+.real-book-page::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome/Safari */
+}
+
+/* Left page margins (closer to spine) */
+.real-book-page-left {
+  padding-right: 3.5rem;
+  border-right: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Right page margins (closer to spine) */
+.real-book-page-right {
+  padding-left: 3.5rem;
+}
+
+/* 3D Leaf Flip Animations */
+.animate-flip-next {
+  animation: leafFlipNext 0.55s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
+}
+
+.animate-flip-prev {
+  animation: leafFlipPrev 0.55s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
+}
+
+@keyframes leafFlipNext {
+  0% {
+    transform: rotateY(0deg) skewY(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(-90deg) skewY(-2deg) scale(0.98);
+    opacity: 0.7;
+  }
+  100% {
+    transform: rotateY(-180deg) skewY(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes leafFlipPrev {
+  0% {
+    transform: rotateY(0deg) skewY(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(90deg) skewY(2deg) scale(0.98);
+    opacity: 0.7;
+  }
+  100% {
+    transform: rotateY(180deg) skewY(0deg);
+    opacity: 0;
+  }
+}
+
+/* Dictionary Lookup Popup Bubble styles */
+.dict-popup-overlay {
+  animation: fadeIn 0.18s ease-out;
+}
+
+.dict-popup-content {
+  animation: zoomIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+.light-theme .dict-popup-content {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 40px -10px rgba(100, 116, 139, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.15);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.9) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
