@@ -106,9 +106,61 @@ strong { font-weight: bold; }
 ${bilingualCSS}${cefrCSS}`
   )
 
-  // Build content HTML
-  const contentHTML = buildContentHTML(blocks, safeTitle, bilingual)
-  zip.file('OEBPS/content.xhtml', contentHTML)
+  // Split blocks into sections (chapters) based on heading level <= 2
+  const sections: {
+    id: string
+    title: string
+    blocks: DocumentBlock[]
+  }[] = []
+
+  let currentSectionBlocks: DocumentBlock[] = []
+  let sectionCount = 0
+
+  for (const block of blocks) {
+    const isNewSectionHeading = block.type === 'heading' && (block.style.level || 1) <= 2
+    if (isNewSectionHeading && currentSectionBlocks.length > 0) {
+      sections.push({
+        id: `section_${sectionCount}`,
+        title: sectionCount === 0 ? 'Mở đầu' : (currentSectionBlocks[0].translatedText || currentSectionBlocks[0].originalText || `Mục ${sectionCount}`),
+        blocks: currentSectionBlocks,
+      })
+      currentSectionBlocks = []
+      sectionCount++
+    }
+    currentSectionBlocks.push(block)
+  }
+
+  if (currentSectionBlocks.length > 0) {
+    sections.push({
+      id: `section_${sectionCount}`,
+      title: sectionCount === 0 ? 'Mở đầu' : (currentSectionBlocks[0].type === 'heading' ? (currentSectionBlocks[0].translatedText || currentSectionBlocks[0].originalText) : `Mục ${sectionCount}`),
+      blocks: currentSectionBlocks,
+    })
+  }
+
+  // Create block to section mapping for TOC links
+  const blockSectionMap = new Map<string, string>()
+  sections.forEach((sec, idx) => {
+    const filename = `section_${idx}.xhtml`
+    for (const b of sec.blocks) {
+      blockSectionMap.set(b.id, filename)
+    }
+  })
+
+  // Build and write section XHTML files
+  sections.forEach((sec, idx) => {
+    const contentHTML = buildContentHTML(sec.blocks, safeTitle, bilingual)
+    zip.file(`OEBPS/section_${idx}.xhtml`, contentHTML)
+  })
+
+  // Manifest items and spine items
+  const manifestItems = sections
+    .map((sec, idx) => `    <item id="section_${idx}" href="section_${idx}.xhtml" media-type="application/xhtml+xml"/>`)
+    .join('\n')
+
+  const spineItems = sections
+    .map((sec, idx) => `    <itemref idref="section_${idx}"/>`)
+    .join('\n')
 
   // content.opf
   const now = new Date().toISOString().slice(0, 10)
@@ -125,10 +177,10 @@ ${bilingualCSS}${cefrCSS}`
   <manifest>
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="style" href="style.css" media-type="text/css"/>
-    <item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>
+${manifestItems}
   </manifest>
   <spine toc="ncx">
-    <itemref idref="content"/>
+${spineItems}
   </spine>
 </package>`
   )
@@ -137,13 +189,16 @@ ${bilingualCSS}${cefrCSS}`
   const headings = blocks.filter(b => b.type === 'heading' && (b.style.level || 1) <= 2)
   const navPoints = headings
     .slice(0, 30)
-    .map(
-      (h, i) =>
-        `    <navPoint id="nav${i}" playOrder="${i + 1}">
-      <navLabel><text>${esc(h.translatedText || h.originalText)}</text></navLabel>
-      <content src="content.xhtml#block-${h.id}"/>
+    .map((h, i) => {
+      const pageNum = h.position?.page
+      const pageLabel = pageNum ? ` (Trang ${pageNum})` : ''
+      const titleText = `${esc(h.translatedText || h.originalText)}${pageLabel}`
+      const sectionFile = blockSectionMap.get(h.id) || 'section_0.xhtml'
+      return `    <navPoint id="nav${i}" playOrder="${i + 1}">
+      <navLabel><text>${titleText}</text></navLabel>
+      <content src="${sectionFile}#block-${h.id}"/>
     </navPoint>`
-    )
+    })
     .join('\n')
 
   zip.file(
@@ -153,7 +208,7 @@ ${bilingualCSS}${cefrCSS}`
   <head><meta name="dtb:uid" content="${randomId()}"/></head>
   <docTitle><text>${safeTitle}</text></docTitle>
   <navMap>
-${navPoints || `    <navPoint id="nav0" playOrder="1"><navLabel><text>${safeTitle}</text></navLabel><content src="content.xhtml"/></navPoint>`}
+${navPoints || `    <navPoint id="nav0" playOrder="1"><navLabel><text>${safeTitle}</text></navLabel><content src="section_0.xhtml"/></navPoint>`}
   </navMap>
 </ncx>`
   )

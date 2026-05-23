@@ -43,7 +43,7 @@ function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
 }
 
 interface ChapterInfo {
-  href: string
+  href: string // Unique identifier for the chapter
   title: string
   blocksCount: number
   translatedCount: number
@@ -52,43 +52,81 @@ interface ChapterInfo {
 }
 
 function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
-  const chaptersMap = new Map<string, { href: string; title: string; blocksCount: number; translatedCount: number; firstBlockIndex: number }>()
-  
+  const chapters: ChapterInfo[] = []
+  let currentChapter: ChapterInfo = {
+    href: 'intro',
+    title: 'Phần mở đầu / Giới thiệu',
+    blocksCount: 0,
+    translatedCount: 0,
+    isCompleted: false,
+    firstBlockIndex: 0,
+  }
+
+  let lastHref = ''
+
   docBlocks.forEach((block, index) => {
-    const href = (block.metadata?.chapterHref as string) || 'default_chapter'
-    
-    if (!chaptersMap.has(href)) {
-      // Tìm heading đầu tiên của chương để làm tiêu đề chương
-      let title = ''
-      if (block.type === 'heading') {
-        title = block.originalText
-      } else {
-        const firstHeading = docBlocks.find(b => b.metadata?.chapterHref === href && b.type === 'heading')
-        title = firstHeading ? firstHeading.originalText : `Chương ${chaptersMap.size + 1}`
+    const blockHref = (block.metadata?.chapterHref as string) || 'default_chapter'
+    const isNewFile = lastHref !== '' && lastHref !== blockHref
+    const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+
+    if (isNewFile || isNewHeading) {
+      // Save previous chapter if it had blocks
+      if (currentChapter.blocksCount > 0) {
+        chapters.push({
+          ...currentChapter,
+          isCompleted: currentChapter.blocksCount === currentChapter.translatedCount,
+        })
       }
-      
-      chaptersMap.set(href, {
-        href,
-        title: title || `Chương ${chaptersMap.size + 1}`,
+
+      currentChapter = {
+        href: block.id, // Dùng ID của block làm định danh chương duy nhất
+        title: isNewHeading ? block.originalText : `Chương ${chapters.length + 1}`,
         blocksCount: 0,
         translatedCount: 0,
+        isCompleted: false,
         firstBlockIndex: index,
-      })
+      }
     }
-    
-    const info = chaptersMap.get(href)!
+
+    lastHref = blockHref
+
     if (block.type !== 'code' && block.type !== 'image') {
-      info.blocksCount += 1
+      currentChapter.blocksCount += 1
       if (block.translatedText && !block.translatedText.startsWith('[CHƯA DỊCH]')) {
-        info.translatedCount += 1
+        currentChapter.translatedCount += 1
       }
     }
   })
-  
-  return Array.from(chaptersMap.values()).map(c => ({
-    ...c,
-    isCompleted: c.blocksCount > 0 && c.blocksCount === c.translatedCount,
-  }))
+
+  if (currentChapter.blocksCount > 0) {
+    chapters.push({
+      ...currentChapter,
+      isCompleted: currentChapter.blocksCount === currentChapter.translatedCount,
+    })
+  }
+
+  return chapters.filter(c => c.blocksCount > 0)
+}
+
+function getBlockChapterMap(docBlocks: DocumentBlock[]): Record<string, string> {
+  const map: Record<string, string> = {}
+  let currentChapterId = 'intro'
+  let lastHref = ''
+
+  docBlocks.forEach((block) => {
+    const blockHref = (block.metadata?.chapterHref as string) || 'default_chapter'
+    const isNewFile = lastHref !== '' && lastHref !== blockHref
+    const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+
+    if (isNewFile || isNewHeading) {
+      currentChapterId = block.id
+    }
+
+    map[block.id] = currentChapterId
+    lastHref = blockHref
+  })
+
+  return map
 }
 
 export default function Home() {
@@ -123,12 +161,7 @@ export default function Home() {
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
 
   useEffect(() => {
-    if (blocks.length > 0) {
-      const chs = getChapters(blocks)
-      setSelectedChapters(chs.map(c => c.href))
-    } else {
-      setSelectedChapters([])
-    }
+    setSelectedChapters([])
   }, [blocks])
 
   const triggerToast = (msg: string) => {
@@ -371,11 +404,12 @@ export default function Home() {
     setError('')
   }
 
-  const handleResetChapterTranslation = (chapterHref: string) => {
+  const handleResetChapterTranslation = (chapterId: string) => {
     if (confirm('Bạn có chắc chắn muốn xóa bản dịch hiện tại của chương này để dịch lại?')) {
+      const chapterMap = getBlockChapterMap(blocks)
       setBlocks(prev =>
         prev.map(b =>
-          ((b.metadata?.chapterHref as string) || 'default_chapter') === chapterHref
+          chapterMap[b.id] === chapterId
             ? { ...b, translatedText: undefined, cefrAnnotatedTranslation: undefined }
             : b
         )
@@ -514,11 +548,12 @@ export default function Home() {
     setStep('translating')
 
     const workingBlocks = bilingual ? expandForBilingual(blocks) : blocks
+    const chapterMap = getBlockChapterMap(workingBlocks)
     
     // Chỉ dịch các câu thuộc chương được chọn và chưa được dịch (hoặc đã được reset)
     const remaining = workingBlocks.filter(b => {
-      const chapterHref = (b.metadata?.chapterHref as string) || 'default_chapter'
-      const isChapterSelected = selectedChapters.includes(chapterHref)
+      const chapterId = chapterMap[b.id] || 'intro'
+      const isChapterSelected = selectedChapters.includes(chapterId)
       const isUntranslated = !b.translatedText || b.translatedText.startsWith('[CHƯA DỊCH]')
       return b.type !== 'code' && b.type !== 'image' && isChapterSelected && isUntranslated
     })
@@ -1090,20 +1125,7 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedChapters(getChapters(blocks).map(c => c.href))}
-                    className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg transition-colors border border-white/5 font-medium"
-                  >
-                    Chọn tất cả
-                  </button>
-                  <button
-                    onClick={() => setSelectedChapters([])}
-                    className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg transition-colors border border-white/5 font-medium"
-                  >
-                    Bỏ chọn tất cả
-                  </button>
-                </div>
+
 
                 <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-xl bg-black/25">
                   {getChapters(blocks).map((ch) => {
