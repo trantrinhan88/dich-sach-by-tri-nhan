@@ -66,7 +66,19 @@ export async function translateBlocks(
 ): Promise<DocumentBlock[]> {
   // Code blocks are never translated
   const translatableBlocks = blocks.filter(b => b.type !== 'code' && b.type !== 'image')
-  const chunkSize = config.provider === 'gemini' ? 120 : config.provider === 'deepseek' ? 40 : CHUNK_SIZE
+  
+  // Xác định kích thước chunk tối ưu theo nhà cung cấp và mô hình
+  let chunkSize = CHUNK_SIZE
+  if (config.provider === 'gemini') {
+    chunkSize = 120
+  } else if (config.provider === 'deepseek') {
+    const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
+    chunkSize = isReasoner ? 10 : 15
+  } else {
+    // Các provider khác (OpenAI, Claude...)
+    chunkSize = 25
+  }
+  
   const chunks = chunkArray(translatableBlocks, chunkSize)
   const result = [...blocks]
   let completed = 0
@@ -75,7 +87,8 @@ export async function translateBlocks(
   // Xác định mức độ chạy song song (concurrency)
   let concurrency = 1
   if (config.provider === 'deepseek') {
-    concurrency = 3 // Giảm xuống 3 để tránh quá tải DeepSeek API
+    const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
+    concurrency = isReasoner ? 1 : 2 // Pro dùng 1 luồng, Flash dùng 2 luồng để tránh quá tải DeepSeek API
   } else if (config.provider === 'openai') {
     concurrency = 5
   } else if (config.provider === 'claude') {
@@ -210,7 +223,10 @@ async function translateChunkWithRetry(
         msg.includes('429') ||
         msg.includes('resource_exhausted') ||
         msg.includes('quota') ||
-        e?.status === 429
+        msg.includes('overloaded') ||
+        msg.includes('too many requests') ||
+        e?.status === 429 ||
+        e?.status === 503
       )
     }
 
@@ -219,7 +235,7 @@ async function translateChunkWithRetry(
       if (attempt < rateLimitRetries) {
         const backoff = 20000 * (attempt + 1)
         console.warn(
-          `[Gemini Rate Limit] Gặp lỗi giới hạn tần suất (429/Quota). Chờ ${backoff / 1000} giây trước khi thử lại (lần thử ${attempt + 1}/${rateLimitRetries})...`
+          `[Rate Limit / Overload] Gặp lỗi giới hạn tần suất hoặc quá tải từ ${config.provider}. Chờ ${backoff / 1000} giây trước khi thử lại (lần thử ${attempt + 1}/${rateLimitRetries})...`
         )
         await delay(backoff)
         return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1, signal)
