@@ -42,6 +42,7 @@ export interface TranslationConfig {
   apiKey: string
   model?: string
   cefrAnnotation?: boolean
+  cacheName?: string
 }
 
 export interface ParseResult {

@@ -42,9 +42,12 @@ export default function Home() {
   const [partialTranslated, setPartialTranslated] = useState<DocumentBlock[]>([])
   const [exportFormat, setExportFormat] = useState<ExportFormat>('epub')
   const [error, setError] = useState('')
+  const [warningMessage, setWarningMessage] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [bilingual, setBilingual] = useState(false)
+  const [isCaching, setIsCaching] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const cacheNameRef = useRef<string | null>(null)
 
   const handleFileParsed = (parsedBlocks: DocumentBlock[], name: string, type: 'pdf' | 'epub') => {
     setBlocks(parsedBlocks)
@@ -60,10 +63,14 @@ export default function Home() {
     signal: AbortSignal,
     onComplete: (blocks: DocumentBlock[]) => void
   ) => {
+    const configWithCache = cacheNameRef.current
+      ? { ...apiConfig, cacheName: cacheNameRef.current }
+      : apiConfig
+
     const res = await fetch('/api/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ blocks: workingBlocks, config: apiConfig }),
+      body: JSON.stringify({ blocks: workingBlocks, config: configWithCache }),
       signal,
     })
 
@@ -125,6 +132,39 @@ export default function Home() {
     if (!blocks.length) return
 
     setError('')
+
+    // Tự động tạo bộ đệm (Context Cache) cho Gemini để tối ưu hóa chi phí
+    if (apiConfig.provider === 'gemini') {
+      setIsCaching(true)
+      try {
+        const cacheRes = await fetch('/api/translate/cache', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blocks, config: apiConfig }),
+        })
+        if (!cacheRes.ok) {
+          const errData = await cacheRes.json()
+          throw new Error(errData.error || 'Khởi tạo bộ nhớ đệm Context Cache thất bại')
+        }
+        const cacheData = await cacheRes.json()
+        if (cacheData.cacheNotSupported) {
+          cacheNameRef.current = null
+          setWarningMessage(cacheData.warning)
+        } else {
+          cacheNameRef.current = cacheData.cacheName
+          setWarningMessage(null)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Lỗi tạo bộ đệm Context Caching')
+        setIsCaching(false)
+        return
+      }
+      setIsCaching(false)
+    } else {
+      cacheNameRef.current = null
+      setWarningMessage(null)
+    }
+
     setStep('translating')
 
     const workingBlocks = bilingual ? expandForBilingual(blocks) : blocks
@@ -173,6 +213,32 @@ export default function Home() {
     }
 
     setError('')
+
+    // Tái thiết lập Cache nếu bị mất hoặc hết hạn
+    if (apiConfig.provider === 'gemini' && !cacheNameRef.current) {
+      setIsCaching(true)
+      try {
+        const cacheRes = await fetch('/api/translate/cache', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blocks, config: apiConfig }),
+        })
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json()
+          if (cacheData.cacheNotSupported) {
+            cacheNameRef.current = null
+            setWarningMessage(cacheData.warning)
+          } else {
+            cacheNameRef.current = cacheData.cacheName
+            setWarningMessage(null)
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi tái tạo cache:', err)
+      }
+      setIsCaching(false)
+    }
+
     setStep('translating')
     setProgress({ completed: 0, total: remaining.length })
 
@@ -256,6 +322,7 @@ export default function Home() {
     setPartialTranslated([])
     setFileName('')
     setError('')
+    cacheNameRef.current = null
   }
 
   const translatedCount = partialTranslated.filter(
@@ -264,17 +331,24 @@ export default function Home() {
   const totalCount = partialTranslated.filter(b => b.type !== 'code' && b.type !== 'image').length
 
   return (
-    <main className="min-h-screen bg-gray-950">
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-gray-950 to-zinc-950 relative overflow-hidden">
+      {/* Dynamic ambient highlights */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none" />
+
+      <div className="max-w-5xl mx-auto px-4 py-10 relative z-10 space-y-8">
         {/* Header */}
-        <header>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
+        <header className="text-center md:text-left border-b border-white/5 pb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-blue-300 font-medium mb-3 backdrop-blur-md">
+            ⚡ Tối ưu dịch thuật song ngữ với Gemini 2.5 Flash
+          </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 tracking-tight">
             📖 DỊCH SÁCH SONG NGỮ
           </h1>
-          <p className="text-gray-400 mt-1 text-sm">
-            Dịch sang tiếng Việt · Giữ nguyên layout · DeepSeek · Gemini · OpenAI
+          <p className="text-gray-400 mt-2 text-base max-w-2xl font-light leading-relaxed">
+            Học ngoại ngữ qua dịch sách định dạng EPUB thành từng câu song ngữ. Tự động hóa bộ đệm <span className="text-blue-400 font-medium">Context Caching</span> giúp tiết kiệm 90% chi phí API.
           </p>
-          <p className="text-gray-500 mt-0.5 text-sm">
+          <p className="text-gray-500 mt-1.5 text-xs">
             Tác giả: Trần Trí Nhân
           </p>
         </header>
@@ -284,20 +358,54 @@ export default function Home() {
 
         {/* Error banner */}
         {error && (
-          <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-5 py-3 text-red-300 text-sm flex items-start gap-3">
+          <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-5 py-3 text-red-300 text-sm flex items-start gap-3 backdrop-blur-md">
             <span>⚠️</span>
             <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-200">✕</button>
+            <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-200 font-bold">✕</button>
+          </div>
+        )}
+
+        {/* Warning banner */}
+        {warningMessage && (
+          <div className="bg-yellow-500/15 border border-yellow-500/40 rounded-xl px-5 py-3 text-yellow-300 text-sm flex items-start gap-3 backdrop-blur-md">
+            <span>💡</span>
+            <span>{warningMessage}</span>
+            <button onClick={() => setWarningMessage(null)} className="ml-auto text-yellow-400 hover:text-yellow-200 font-bold font-mono">✕</button>
+          </div>
+        )}
+
+        {/* Caching Shimmer Loader */}
+        {isCaching && (
+          <div className="bg-white/5 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-8 text-center space-y-4 shadow-2xl shadow-blue-500/10">
+            <div className="relative inline-flex">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/20 text-3xl animate-spin">
+                🌀
+              </span>
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-[9px] font-bold text-white shadow-md">
+                AI
+              </span>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-300 tracking-wide">
+                🔮 ĐANG TỐI ƯU CHI PHÍ VỚI CONTEXT CACHING...
+              </h3>
+              <p className="text-gray-400 text-sm max-w-lg mx-auto leading-relaxed">
+                Đang đẩy nội dung sách gốc lên bộ đệm đám mây của Google AI Studio. 
+                Quá trình này chỉ diễn ra một lần và giúp giảm 90% chi phí API, đồng thời giúp AI ghi nhớ toàn bộ văn cảnh.
+              </p>
+            </div>
           </div>
         )}
 
         {/* Step: Upload */}
-        {step === 'upload' && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              1. Chọn tài liệu
+        {step === 'upload' && !isCaching && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">
+              Bước 1: Tải lên tài liệu (.epub)
             </h2>
-            <FileUpload onFileParsed={handleFileParsed} />
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-1 shadow-xl">
+              <FileUpload onFileParsed={handleFileParsed} />
+            </div>
           </section>
         )}
 

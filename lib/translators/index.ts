@@ -25,12 +25,17 @@ export async function translateBlocks(
 ): Promise<DocumentBlock[]> {
   // Code blocks are never translated
   const translatableBlocks = blocks.filter(b => b.type !== 'code' && b.type !== 'image')
-  const chunks = chunkArray(translatableBlocks, CHUNK_SIZE)
+  const chunkSize = config.provider === 'gemini' ? 120 : CHUNK_SIZE
+  const chunks = chunkArray(translatableBlocks, chunkSize)
   const result = [...blocks]
   let completed = 0
 
   for (let i = 0; i < chunks.length; i++) {
     if (signal?.aborted) break
+
+    if (i > 0 && config.provider === 'gemini') {
+      await delay(2000)
+    }
 
     const chunk = chunks[i]
     const contextBefore = i > 0 ? chunks[i - 1][chunks[i - 1].length - 1]?.originalText : undefined
@@ -122,14 +127,50 @@ async function callTranslationAPI(
     rawText = res.content[0].type === 'text' ? res.content[0].text : '{}'
   } else {
     // Gemini
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genAI = new GoogleGenerativeAI(config.apiKey)
-    const model = genAI.getGenerativeModel({
-      model: config.model || 'gemini-2.5-flash-lite',
-      generationConfig: { responseMimeType: 'application/json' },
+    const { GoogleGenAI } = await import('@google/genai')
+    const ai = new GoogleGenAI({ apiKey: config.apiKey })
+
+    const itemProperties: Record<string, { type: string }> = {
+      id: { type: 'STRING' },
+      translatedText: { type: 'STRING' },
+    }
+    const itemRequired = ['id', 'translatedText']
+
+    if (config.cefrAnnotation) {
+      itemProperties.cefrAnnotatedOriginal = { type: 'STRING' }
+      itemProperties.cefrAnnotatedTranslation = { type: 'STRING' }
+      itemRequired.push('cefrAnnotatedOriginal', 'cefrAnnotatedTranslation')
+    }
+
+    const responseSchema = {
+      type: 'OBJECT',
+      properties: {
+        translations: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: itemProperties,
+            required: itemRequired,
+          },
+        },
+      },
+      required: ['translations'],
+    }
+
+    const targetModel = config.model || 'gemini-2.5-flash'
+
+    const res = await ai.models.generateContent({
+      model: targetModel,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: responseSchema,
+        ...(config.cacheName && {
+          cachedContent: config.cacheName
+        })
+      }
     })
-    const res = await model.generateContent(prompt, { signal })
-    rawText = res.response.text()
+    rawText = res.text || '{}'
   }
 
   const jsonMatch = rawText.match(/\{[\s\S]*\}/)
