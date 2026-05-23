@@ -639,7 +639,13 @@ export default function DocumentPreview({
             <div className="book-stack-right" />
 
             {/* LEFT BOOK PAGE */}
-            <div className={`real-book-page real-book-page-left ${flipClass}`}>
+            <div 
+              className={`real-book-page real-book-page-left ${
+                flipClass === 'animate-flip-prev' ? 'page-flipping-prev' : ''
+              }`}
+              onDoubleClick={handlePrevPage}
+            >
+              {flipClass === 'animate-flip-next' && <div className="page-shadow-overlay-left" />}
               {/* Corner Ornaments */}
               <div className="vintage-ornament vintage-ornament-tl" />
               <div className="vintage-ornament vintage-ornament-bl" />
@@ -676,7 +682,13 @@ export default function DocumentPreview({
             </div>
 
             {/* RIGHT BOOK PAGE */}
-            <div className={`real-book-page real-book-page-right ${flipClass}`}>
+            <div 
+              className={`real-book-page real-book-page-right ${
+                flipClass === 'animate-flip-next' ? 'page-flipping-next' : ''
+              }`}
+              onDoubleClick={handleNextPage}
+            >
+              {flipClass === 'animate-flip-prev' && <div className="page-shadow-overlay-right" />}
               {/* Corner Ornaments */}
               <div className="vintage-ornament vintage-ornament-tr" />
               <div className="vintage-ornament vintage-ornament-br" />

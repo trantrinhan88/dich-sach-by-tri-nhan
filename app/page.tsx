@@ -475,48 +475,63 @@ export default function Home() {
     const decoder = new TextDecoder()
     let buf = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buf += decoder.decode(value, { stream: true })
-
-      const parts = buf.split('\n\n')
-      buf = parts.pop() || ''
-
-      for (const part of parts) {
-        if (!part.startsWith('data: ')) continue
-        const data = JSON.parse(part.slice(6))
-
-        if (data.type === 'progress') {
-          setProgress({ completed: data.completed, total: data.total })
-          if (data.newlyTranslated?.length) {
-            setPartialTranslated(prev => {
-              const map = new Map(prev.map(b => [b.id, b]))
-              for (const t of data.newlyTranslated) {
-                const block = map.get(t.id)
-                if (block) {
-                  map.set(t.id, {
-                    ...block,
-                    translatedText: t.translatedText,
-                    ...(t.cefrAnnotatedOriginal && { cefrAnnotatedOriginal: t.cefrAnnotatedOriginal }),
-                    ...(t.cefrAnnotatedTranslation && { cefrAnnotatedTranslation: t.cefrAnnotatedTranslation }),
-                  })
-                }
-              }
-              return prev.map(b => map.get(b.id) ?? b)
-            })
-          }
-        } else if (data.type === 'complete') {
-          onComplete(data.blocks)
-          setStep('done')
-        } else if (data.type === 'error') {
-          throw new Error(data.message)
-        }
+    // Đăng ký sự kiện abort để hủy stream reader ngay lập tức khi người dùng bấm tạm dừng
+    const onAbort = () => {
+      try {
+        reader.cancel()
+      } catch (err) {
+        console.error('Lỗi khi hủy stream reader:', err)
       }
     }
+    signal.addEventListener('abort', onAbort)
 
-    // reader.read() có thể trả về done:true thay vì throw khi fetch bị abort —
-    // kiểm tra signal để đảm bảo chuyển đúng sang 'paused'
+    try {
+      while (true) {
+        if (signal.aborted) {
+          throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
+        }
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+
+        const parts = buf.split('\n\n')
+        buf = parts.pop() || ''
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue
+          const data = JSON.parse(part.slice(6))
+
+          if (data.type === 'progress') {
+            setProgress({ completed: data.completed, total: data.total })
+            if (data.newlyTranslated?.length) {
+              setPartialTranslated(prev => {
+                const map = new Map(prev.map(b => [b.id, b]))
+                for (const t of data.newlyTranslated) {
+                  const block = map.get(t.id)
+                  if (block) {
+                    map.set(t.id, {
+                      ...block,
+                      translatedText: t.translatedText,
+                      ...(t.cefrAnnotatedOriginal && { cefrAnnotatedOriginal: t.cefrAnnotatedOriginal }),
+                      ...(t.cefrAnnotatedTranslation && { cefrAnnotatedTranslation: t.cefrAnnotatedTranslation }),
+                    })
+                  }
+                }
+                return prev.map(b => map.get(b.id) ?? b)
+              })
+            }
+          } else if (data.type === 'complete') {
+            onComplete(data.blocks)
+            setStep('done')
+          } else if (data.type === 'error') {
+            throw new Error(data.message)
+          }
+        }
+      }
+    } finally {
+      signal.removeEventListener('abort', onAbort)
+    }
+
     if (signal.aborted) {
       throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
     }
@@ -618,29 +633,36 @@ export default function Home() {
         await autoSaveToLibrary(finalMerged)
       }
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        setStep('paused')
+      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        setStep(prev => prev === 'translating' ? 'paused' : prev)
       } else {
         setError(err instanceof Error ? err.message : 'Lỗi không xác định')
-        setStep('ready')
+        setStep(prev => prev === 'translating' ? 'ready' : prev)
       }
     } finally {
-      abortRef.current = null
+      if (abortRef.current === controller) {
+        abortRef.current = null
+      }
     }
   }
 
   const handlePause = () => {
-    abortRef.current?.abort()
+    if (abortRef.current) {
+      abortRef.current.abort()
+      setStep('paused')
+    }
   }
 
   const handleResume = async () => {
     if (!apiConfig) { setError('Vui lòng cài đặt API key trước.'); return }
 
-    const remaining = partialTranslated.filter(b =>
-      b.type !== 'code' &&
-      b.type !== 'image' &&
-      (!b.translatedText || b.translatedText.startsWith('[CHƯA DỊCH]'))
-    )
+    const chapterMap = getBlockChapterMap(partialTranslated)
+    const remaining = partialTranslated.filter(b => {
+      const chapterId = chapterMap[b.id] || 'intro'
+      const isChapterSelected = selectedChapters.includes(chapterId)
+      const isUntranslated = !b.translatedText || b.translatedText.startsWith('[CHƯA DỊCH]')
+      return b.type !== 'code' && b.type !== 'image' && isChapterSelected && isUntranslated
+    })
 
     if (!remaining.length) {
       setStep('done')
@@ -708,14 +730,16 @@ export default function Home() {
         await autoSaveToLibrary(finalMerged)
       }
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        setStep('paused')
+      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        setStep(prev => prev === 'translating' ? 'paused' : prev)
       } else {
         setError(err instanceof Error ? err.message : 'Lỗi không xác định')
-        setStep('paused')
+        setStep(prev => prev === 'translating' ? 'paused' : prev)
       }
     } finally {
-      abortRef.current = null
+      if (abortRef.current === controller) {
+        abortRef.current = null
+      }
     }
   }
 
