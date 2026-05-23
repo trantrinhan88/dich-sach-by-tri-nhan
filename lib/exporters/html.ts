@@ -44,7 +44,7 @@ export function exportHTML(blocks: DocumentBlock[], title: string, bilingual = f
     .join('\n  ')
 
   const bilingualCSS = bilingual ? `
-    .en-para { color: #666; font-size: 0.93em; margin: 0.8rem 0 0.1rem; font-style: italic; text-indent: 0; }
+    .en-para { color: #666; font-size: 0.93em; margin: 0.8rem 0 0.1rem; font-style: italic; text-indent: 1.2cm; }
     .vi-para { margin: 0 0 1rem; }
     .en-heading { color: #999; font-size: 0.88em; margin: 0 0 0.5rem; font-style: italic; font-weight: normal; }` : ''
 

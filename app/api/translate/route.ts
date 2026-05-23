@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Gửi heartbeat định kỳ mỗi 15 giây để giữ cho kết nối luôn hoạt động, không bị Node.js/trình duyệt ngắt kết nối do quá hạn chờ
+  const heartbeat = setInterval(async () => {
+    try {
+      await writer.write(encoder.encode(': ping\n\n'))
+    } catch {
+      clearInterval(heartbeat)
+    }
+  }, 15000)
+
   ;(async () => {
     try {
       const translated = await translateBlocks(blocks, config, async (completed, total, newlyTranslated) => {
@@ -42,6 +51,7 @@ export async function POST(request: NextRequest) {
       const message = err instanceof Error ? err.message : 'Lỗi dịch'
       await send({ type: 'error', message })
     } finally {
+      clearInterval(heartbeat)
       try {
         await writer.close()
       } catch {

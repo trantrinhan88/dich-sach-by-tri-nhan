@@ -30,7 +30,7 @@ export async function exportEPUB(blocks: DocumentBlock[], title: string, bilingu
   font-size: 12pt;
   font-style: italic;
   margin: 0.6em 0 0.1em;
-  text-indent: 0;
+  text-indent: 1.2cm;
   line-height: 1.6;
 }
 .vi-text {
