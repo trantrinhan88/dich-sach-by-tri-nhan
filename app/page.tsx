@@ -42,6 +42,55 @@ function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
   return result
 }
 
+interface ChapterInfo {
+  href: string
+  title: string
+  blocksCount: number
+  translatedCount: number
+  isCompleted: boolean
+  firstBlockIndex: number
+}
+
+function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
+  const chaptersMap = new Map<string, { href: string; title: string; blocksCount: number; translatedCount: number; firstBlockIndex: number }>()
+  
+  docBlocks.forEach((block, index) => {
+    const href = (block.metadata?.chapterHref as string) || 'default_chapter'
+    
+    if (!chaptersMap.has(href)) {
+      // Tìm heading đầu tiên của chương để làm tiêu đề chương
+      let title = ''
+      if (block.type === 'heading') {
+        title = block.originalText
+      } else {
+        const firstHeading = docBlocks.find(b => b.metadata?.chapterHref === href && b.type === 'heading')
+        title = firstHeading ? firstHeading.originalText : `Chương ${chaptersMap.size + 1}`
+      }
+      
+      chaptersMap.set(href, {
+        href,
+        title: title || `Chương ${chaptersMap.size + 1}`,
+        blocksCount: 0,
+        translatedCount: 0,
+        firstBlockIndex: index,
+      })
+    }
+    
+    const info = chaptersMap.get(href)!
+    if (block.type !== 'code' && block.type !== 'image') {
+      info.blocksCount += 1
+      if (block.translatedText && !block.translatedText.startsWith('[CHƯA DỊCH]')) {
+        info.translatedCount += 1
+      }
+    }
+  })
+  
+  return Array.from(chaptersMap.values()).map(c => ({
+    ...c,
+    isCompleted: c.blocksCount > 0 && c.blocksCount === c.translatedCount,
+  }))
+}
+
 export default function Home() {
   const [apiConfig, setApiConfig] = useState<TranslationConfig | null>(null)
   const [step, setStep] = useState<Step>('upload')
@@ -71,6 +120,16 @@ export default function Home() {
   const [translatingBookId, setTranslatingBookId] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const [importInfo, setImportInfo] = useState('')
+  const [selectedChapters, setSelectedChapters] = useState<string[]>([])
+
+  useEffect(() => {
+    if (blocks.length > 0) {
+      const chs = getChapters(blocks)
+      setSelectedChapters(chs.map(c => c.href))
+    } else {
+      setSelectedChapters([])
+    }
+  }, [blocks])
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg)
@@ -312,6 +371,19 @@ export default function Home() {
     setError('')
   }
 
+  const handleResetChapterTranslation = (chapterHref: string) => {
+    if (confirm('Bạn có chắc chắn muốn xóa bản dịch hiện tại của chương này để dịch lại?')) {
+      setBlocks(prev =>
+        prev.map(b =>
+          ((b.metadata?.chapterHref as string) || 'default_chapter') === chapterHref
+            ? { ...b, translatedText: undefined, cefrAnnotatedTranslation: undefined }
+            : b
+        )
+      )
+      triggerToast('🧹 Đã xóa bản dịch cũ của chương này!')
+    }
+  }
+
   const runTranslation = async (
     workingBlocks: DocumentBlock[],
     signal: AbortSignal,
@@ -442,24 +514,52 @@ export default function Home() {
     setStep('translating')
 
     const workingBlocks = bilingual ? expandForBilingual(blocks) : blocks
-    const initBlocks = workingBlocks.map(b => ({ ...b, translatedText: undefined as string | undefined }))
-    setPartialTranslated(initBlocks)
+    
+    // Chỉ dịch các câu thuộc chương được chọn và chưa được dịch (hoặc đã được reset)
+    const remaining = workingBlocks.filter(b => {
+      const chapterHref = (b.metadata?.chapterHref as string) || 'default_chapter'
+      const isChapterSelected = selectedChapters.includes(chapterHref)
+      const isUntranslated = !b.translatedText || b.translatedText.startsWith('[CHƯA DỊCH]')
+      return b.type !== 'code' && b.type !== 'image' && isChapterSelected && isUntranslated
+    })
+
+    if (remaining.length === 0) {
+      setPartialTranslated(workingBlocks)
+      await autoSaveToLibrary(workingBlocks)
+      setStep('done')
+      triggerToast('🎉 Các chương được chọn đã dịch hoàn chỉnh!')
+      return
+    }
+
+    setPartialTranslated(workingBlocks)
     setProgress({
       completed: 0,
-      total: workingBlocks.filter(b => b.type !== 'code' && b.type !== 'image').length,
+      total: remaining.length,
     })
 
     const controller = new AbortController()
     abortRef.current = controller
 
     try {
-      let finalBlocks: DocumentBlock[] = []
-      await runTranslation(workingBlocks, controller.signal, (translated) => {
-        setPartialTranslated(translated)
-        finalBlocks = translated
+      let finalMerged: DocumentBlock[] = []
+      await runTranslation(remaining, controller.signal, (translated) => {
+        setPartialTranslated(prev => {
+          const merged = prev.map(b => {
+            const updated = translated.find(t => t.id === b.id)
+            if (!updated?.translatedText) return b
+            return {
+              ...b,
+              translatedText: updated.translatedText,
+              ...(updated.cefrAnnotatedOriginal && { cefrAnnotatedOriginal: updated.cefrAnnotatedOriginal }),
+              ...(updated.cefrAnnotatedTranslation && { cefrAnnotatedTranslation: updated.cefrAnnotatedTranslation }),
+            }
+          })
+          finalMerged = merged
+          return merged
+        })
       })
-      if (finalBlocks.length > 0) {
-        await autoSaveToLibrary(finalBlocks)
+      if (finalMerged.length > 0) {
+        await autoSaveToLibrary(finalMerged)
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -980,10 +1080,97 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Chapter Selector Section */}
+            {blocks.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
+                  <p className="text-gray-400 text-xs mt-1 font-light">
+                    Chọn các chương bạn muốn dịch. Bạn có thể xóa bản dịch lỗi của một chương cụ thể để dịch lại.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedChapters(getChapters(blocks).map(c => c.href))}
+                    className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg transition-colors border border-white/5 font-medium"
+                  >
+                    Chọn tất cả
+                  </button>
+                  <button
+                    onClick={() => setSelectedChapters([])}
+                    className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg transition-colors border border-white/5 font-medium"
+                  >
+                    Bỏ chọn tất cả
+                  </button>
+                </div>
+
+                <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-xl bg-black/25">
+                  {getChapters(blocks).map((ch) => {
+                    const isSelected = selectedChapters.includes(ch.href)
+                    const percent = ch.blocksCount > 0 ? Math.round((ch.translatedCount / ch.blocksCount) * 100) : 0
+                    
+                    return (
+                      <div key={ch.href} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedChapters(prev => [...prev, ch.href])
+                              } else {
+                                setSelectedChapters(prev => prev.filter(h => h !== ch.href))
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/10 bg-black/50 text-blue-600 focus:ring-blue-500 focus:ring-offset-black cursor-pointer"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-white font-medium text-xs truncate" title={ch.title}>
+                              {ch.title}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {ch.translatedCount}/{ch.blocksCount} câu song ngữ ({percent}%)
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          {ch.isCompleted ? (
+                            <span className="text-[9px] font-mono bg-green-500/10 text-green-300 px-2 py-0.5 rounded-full border border-green-500/20 font-bold">
+                              Hoàn thành
+                            </span>
+                          ) : ch.translatedCount > 0 ? (
+                            <span className="text-[9px] font-mono bg-yellow-500/10 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/20 font-bold">
+                              Dịch dở
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-mono bg-white/5 text-gray-400 px-2 py-0.5 rounded-full border border-white/5">
+                              Chưa dịch
+                            </span>
+                          )}
+
+                          {ch.translatedCount > 0 && (
+                            <button
+                              onClick={() => handleResetChapterTranslation(ch.href)}
+                              className="text-[10px] text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition-all font-semibold active:scale-95"
+                              title="Xóa toàn bộ câu dịch của chương này để dịch lại"
+                            >
+                              🔄 Reset
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-3 items-center">
               <button
                 onClick={handleTranslate}
-                disabled={!apiConfig}
+                disabled={!apiConfig || selectedChapters.length === 0}
                 className="px-7 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-600/20"
               >
                 ▶ Bắt đầu dịch
@@ -1008,6 +1195,10 @@ export default function Home() {
 
               {!apiConfig && (
                 <span className="text-yellow-400 text-sm">← Cần cài đặt API key trước</span>
+              )}
+
+              {apiConfig && selectedChapters.length === 0 && (
+                <span className="text-yellow-400 text-sm">⚠️ Hãy chọn ít nhất một chương để dịch</span>
               )}
             </div>
           </section>

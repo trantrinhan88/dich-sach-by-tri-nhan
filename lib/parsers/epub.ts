@@ -62,6 +62,14 @@ function parseHTMLChapter(html: string, chapterHref: string): DocumentBlock[] {
   const $ = cheerio.load(html)
   const blocks: DocumentBlock[] = []
 
+  const rawBlocks: {
+    type: BlockType
+    text: string
+    style: BlockStyle
+    tag: string
+    className: string
+  }[] = []
+
   $('body')
     .find('h1,h2,h3,h4,h5,h6,p,li,td,th,figcaption,pre,code,blockquote')
     .each((_, el) => {
@@ -78,9 +86,7 @@ function parseHTMLChapter(html: string, chapterHref: string): DocumentBlock[] {
         level = parseInt(headingMatch[1])
       } else if (tag === 'li') {
         type = 'list-item'
-      } else if (tag === 'td') {
-        type = 'table-cell'
-      } else if (tag === 'th') {
+      } else if (tag === 'td' || tag === 'th') {
         type = 'table-cell'
       } else if (tag === 'figcaption') {
         type = 'caption'
@@ -100,14 +106,69 @@ function parseHTMLChapter(html: string, chapterHref: string): DocumentBlock[] {
         fontWeight: (headingMatch || tag === 'th' || hasBoldStyle || allContentBold) ? 'bold' : 'normal',
       }
 
-      blocks.push({
-        id: randomUUID(),
+      rawBlocks.push({
         type,
-        originalText: text,
+        text,
         style,
-        metadata: { chapterHref, tag },
+        tag,
+        className: $(el).attr('class') || '',
       })
     })
+
+  let i = 0
+  while (i < rawBlocks.length) {
+    const current = rawBlocks[i]
+
+    // Case 1: Paragraphs - <p class="en-text" or "en-para"> followed by <p class="vi-text" or "vi-para">
+    if (
+      current.type === 'paragraph' &&
+      (current.className.includes('en-text') || current.className.includes('en-para')) &&
+      i + 1 < rawBlocks.length &&
+      rawBlocks[i + 1].type === 'paragraph' &&
+      (rawBlocks[i + 1].className.includes('vi-text') || rawBlocks[i + 1].className.includes('vi-para'))
+    ) {
+      blocks.push({
+        id: randomUUID(),
+        type: 'paragraph',
+        originalText: current.text,
+        translatedText: rawBlocks[i + 1].text,
+        style: current.style,
+        metadata: { chapterHref, tag: current.tag },
+      })
+      i += 2
+      continue
+    }
+
+    // Case 2: Headings - <h1-6> followed by <p class="en-text" or "en-heading"> (translated heading + original heading)
+    if (
+      current.type === 'heading' &&
+      i + 1 < rawBlocks.length &&
+      rawBlocks[i + 1].type === 'paragraph' &&
+      (rawBlocks[i + 1].className.includes('en-text') || rawBlocks[i + 1].className.includes('en-heading'))
+    ) {
+      blocks.push({
+        id: randomUUID(),
+        type: 'heading',
+        originalText: rawBlocks[i + 1].text,
+        translatedText: current.text,
+        style: current.style,
+        metadata: { chapterHref, tag: current.tag },
+      })
+      i += 2
+      continue
+    }
+
+    // Default Case: normal parse
+    blocks.push({
+      id: randomUUID(),
+      type: current.type,
+      originalText: current.text,
+      translatedText: current.className.includes('vi-text') || current.className.includes('vi-para') ? current.text : undefined,
+      style: current.style,
+      metadata: { chapterHref, tag: current.tag },
+    })
+    i += 1
+  }
 
   return blocks
 }
