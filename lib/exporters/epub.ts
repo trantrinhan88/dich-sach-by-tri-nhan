@@ -141,7 +141,7 @@ ${bilingualCSS}${cefrCSS}`
       (h, i) =>
         `    <navPoint id="nav${i}" playOrder="${i + 1}">
       <navLabel><text>${esc(h.translatedText || h.originalText)}</text></navLabel>
-      <content src="content.xhtml"/>
+      <content src="content.xhtml#block-${h.id}"/>
     </navPoint>`
     )
     .join('\n')
@@ -177,9 +177,9 @@ function buildContentHTML(blocks: DocumentBlock[], title: string, bilingual: boo
         case 'heading': {
           const lvl = Math.min(block.style.level || 1, 6)
           if (bilingual && block.translatedText) {
-            return `<h${lvl}>${vi}</h${lvl}>\n  <p class="en-text">${en}</p>`
+            return `<h${lvl} id="block-${block.id}">${vi}</h${lvl}>\n  <p class="en-text">${en}</p>`
           }
-          return `<h${lvl}>${vi}</h${lvl}>`
+          return `<h${lvl} id="block-${block.id}">${vi}</h${lvl}>`
         }
         case 'list-item':
           return `<li>${vi}</li>`

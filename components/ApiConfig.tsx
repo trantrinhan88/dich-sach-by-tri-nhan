@@ -7,7 +7,7 @@ const PROVIDERS: { value: AIProvider; label: string; models: string[]; placehold
   {
     value: 'deepseek',
     label: 'DeepSeek',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
     placeholder: 'sk-...',
     envKey: 'DEEPSEEK_API_KEY',
   },
@@ -56,6 +56,13 @@ export default function ApiConfig({ onConfigChange }: Props) {
     ANTHROPIC_API_KEY: '',
   })
 
+  // Separate keys for each model and mode
+  const [deepseekApiKey, setDeepseekApiKey] = useState('')
+  const [geminiFreeApiKey, setGeminiFreeApiKey] = useState('')
+  const [geminiPaidApiKey, setGeminiPaidApiKey] = useState('')
+  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [claudeApiKey, setClaudeApiKey] = useState('')
+
   const providerDef = PROVIDERS.find(p => p.value === provider)!
 
   // Load from localStorage on mount
@@ -68,6 +75,14 @@ export default function ApiConfig({ onConfigChange }: Props) {
         setApiKey(cfg.apiKey)
         setModel(cfg.model || '')
         setCefrAnnotation(cfg.cefrAnnotation ?? false)
+        
+        // Load and migrate individual keys
+        setDeepseekApiKey(cfg.deepseekApiKey || (cfg.provider === 'deepseek' ? cfg.apiKey : ''))
+        setGeminiFreeApiKey(cfg.geminiFreeApiKey || (cfg.provider === 'gemini' && !cfg.geminiPaidApiKey ? cfg.apiKey : ''))
+        setGeminiPaidApiKey(cfg.geminiPaidApiKey || '')
+        setOpenaiApiKey(cfg.openaiApiKey || (cfg.provider === 'openai' ? cfg.apiKey : ''))
+        setClaudeApiKey(cfg.claudeApiKey || (cfg.provider === 'claude' ? cfg.apiKey : ''))
+        
         onConfigChange(cfg)
         setOpen(false)
       }
@@ -78,14 +93,28 @@ export default function ApiConfig({ onConfigChange }: Props) {
   }, [])
 
   const handleSave = () => {
-    if (!apiKey.trim()) return
+    const activeApiKey = 
+      provider === 'deepseek' ? deepseekApiKey :
+      provider === 'gemini' ? geminiFreeApiKey || geminiPaidApiKey :
+      provider === 'openai' ? openaiApiKey :
+      provider === 'claude' ? claudeApiKey : ''
+
+    if (!activeApiKey.trim()) return
+
     const cfg: TranslationConfig = {
       provider,
-      apiKey: apiKey.trim(),
+      apiKey: activeApiKey.trim(),
       model: model || undefined,
       cefrAnnotation: cefrAnnotation || undefined,
+      deepseekApiKey: deepseekApiKey.trim() || undefined,
+      geminiFreeApiKey: geminiFreeApiKey.trim() || undefined,
+      geminiPaidApiKey: geminiPaidApiKey.trim() || undefined,
+      openaiApiKey: openaiApiKey.trim() || undefined,
+      claudeApiKey: claudeApiKey.trim() || undefined,
     }
+    
     localStorage.setItem(LS_KEY, JSON.stringify(cfg))
+    setApiKey(activeApiKey.trim())
     onConfigChange(cfg)
     setOpen(false)
   }
@@ -93,6 +122,11 @@ export default function ApiConfig({ onConfigChange }: Props) {
   const handleClear = () => {
     localStorage.removeItem(LS_KEY)
     setApiKey('')
+    setDeepseekApiKey('')
+    setGeminiFreeApiKey('')
+    setGeminiPaidApiKey('')
+    setOpenaiApiKey('')
+    setClaudeApiKey('')
     setModel('')
     setCefrAnnotation(false)
     onConfigChange(null)
@@ -209,26 +243,84 @@ export default function ApiConfig({ onConfigChange }: Props) {
           </div>
 
           {/* API Key */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              API Key{' '}
-              <span className="text-gray-500 text-xs">({providerDef.envKey})</span>
-            </label>
-            <div className="flex gap-2">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={providerDef.placeholder}
-                className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
-              />
+          <div className="space-y-3 bg-gray-950/30 p-4 rounded-xl border border-gray-800">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Cấu hình API Key</span>
               <button
                 onClick={() => setShowKey(s => !s)}
-                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:bg-gray-600 text-sm"
+                className="text-[10px] px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg transition-colors border border-gray-700/50"
               >
-                {showKey ? 'Ẩn' : 'Hiện'}
+                {showKey ? '👁️ Ẩn Keys' : '👁️ Hiện Keys'}
               </button>
             </div>
+
+            {provider === 'gemini' ? (
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-1 flex items-center justify-between">
+                    <span>Gemini Free API Key 🆓</span>
+                    <span className="text-[10px] text-gray-500 font-light">Dùng khi không có Paid key</span>
+                  </label>
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={geminiFreeApiKey}
+                    onChange={e => setGeminiFreeApiKey(e.target.value)}
+                    placeholder="AIzaSy... (Gemini Free Key)"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-1 flex items-center justify-between">
+                    <span>Gemini Paid API Key (Billing) 💳</span>
+                    <span className="text-[10px] text-yellow-500/80 font-medium">Tạo cache + dịch với cache (rẻ 75%)</span>
+                  </label>
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={geminiPaidApiKey}
+                    onChange={e => setGeminiPaidApiKey(e.target.value)}
+                    placeholder="AIzaSy... (Gemini Paid Key)"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+                <div className="bg-blue-500/5 border border-blue-500/15 rounded-lg px-3 py-2 text-[10px] text-blue-300/80 leading-relaxed">
+                  <span className="font-semibold text-blue-300">Luồng Context Caching:</span>{' '}
+                  Paid key → Upload nội dung sách lên cache → Dịch toàn bộ sách với cache (tiết kiệm ~75% tokens) → Kết quả rất nhanh và rẻ.
+                </div>
+              </div>
+            ) : provider === 'deepseek' ? (
+              <div>
+                <label className="block text-[11px] text-gray-400 mb-1">DeepSeek API Key</label>
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={deepseekApiKey}
+                  onChange={e => setDeepseekApiKey(e.target.value)}
+                  placeholder="sk-... (DeepSeek API Key)"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+            ) : provider === 'openai' ? (
+              <div>
+                <label className="block text-[11px] text-gray-400 mb-1">OpenAI API Key</label>
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={openaiApiKey}
+                  onChange={e => setOpenaiApiKey(e.target.value)}
+                  placeholder="sk-... (OpenAI API Key)"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-[11px] text-gray-400 mb-1">Claude API Key</label>
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={claudeApiKey}
+                  onChange={e => setClaudeApiKey(e.target.value)}
+                  placeholder="sk-ant-... (Claude API Key)"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+            )}
           </div>
 
           {/* Model */}
@@ -337,12 +429,17 @@ export default function ApiConfig({ onConfigChange }: Props) {
           <div className="flex gap-3 pt-1">
             <button
               onClick={handleSave}
-              disabled={!apiKey.trim()}
+              disabled={
+                provider === 'deepseek' ? !deepseekApiKey.trim() :
+                provider === 'gemini' ? (!geminiFreeApiKey.trim() && !geminiPaidApiKey.trim()) :
+                provider === 'openai' ? !openaiApiKey.trim() :
+                !claudeApiKey.trim()
+              }
               className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
             >
               Lưu cài đặt
             </button>
-            {apiKey && (
+            {(apiKey || deepseekApiKey || geminiFreeApiKey || geminiPaidApiKey || openaiApiKey || claudeApiKey) && (
               <button
                 onClick={handleClear}
                 className="px-5 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-sm"

@@ -1,8 +1,46 @@
 import { DocumentBlock, TranslationConfig } from '../types'
 
-const CHUNK_SIZE = 12
+const CHUNK_SIZE = 40
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1500
+
+// System prompt dịch giả văn học — chỉ dùng cho DeepSeek (hỗ trợ system role)
+const LITERARY_SYSTEM_PROMPT = `Bạn là một dịch giả văn học đại tài, có sự am hiểu sâu sắc về văn học cổ điển lẫn hiện đại, sở hữu vốn từ vựng tiếng Việt phong phú, đặc biệt là các từ Hán-Việt mang tính ước lệ, gợi hình và giàu nhạc điệu.
+
+QUY TẮC NHÂN XƯNG (cốt lõi):
+- TUYỆT ĐỐI KHÔNG sử dụng các từ mang tính chất cổ trang/kiếm hiệp phương Đông hoặc không phù hợp với văn học phương Tây như: "chàng", "nàng" ("chàng - nàng", "thiếp - chàng"), "huynh - muội", "tỷ - muội", "lão - gã", "kẻ hoang đàng - người khuê các", "kẻ này - người kia", "ngươi - ta".
+- TUYỆT ĐỐI KHÔNG sử dụng cặp "tôi - bạn" một cách máy móc trong các tác phẩm văn học nghệ thuật.
+- TUYỆT ĐỐI KHÔNG sử dụng từ "đàn bà" (khi ám chỉ phụ nữ nói chung); hãy luôn sử dụng từ "phụ nữ" để thay thế nhằm đảm bảo sắc thái lịch sự, trang trọng và văn minh.
+- Vì đây là tác phẩm văn học phương Tây, hãy sử dụng các cặp nhân xưng văn minh, tự nhiên, đúng văn phong phương Tây như:
+  + Cặp đôi yêu nhau hoặc vợ chồng: anh - em, ông - bà (nếu là vợ chồng già).
+  + Quan hệ xã giao, lịch thiệp, trang trọng: tôi - anh, tôi - cô, tôi - ông, tôi - bà.
+  + Quan hệ gia đình: cha - con, mẹ - con, chú - cháu, anh - em...
+  + Ngôi thứ ba khi mô tả/narrate: Ưu tiên hàng đầu dùng "anh ấy" (cho nam giới) và "cô ấy" (cho nữ giới) trước hết; hạn chế dùng "gã", "hắn", "y", "ông ấy", "bà ấy" trừ khi ngữ cảnh đặc thù yêu cầu.
+- Đại từ nhân xưng phải thay đổi linh hoạt theo ngữ cảnh, độ tuổi, địa vị, mối quan hệ và dòng cảm xúc của nhân vật: khi yêu thương thì tha thiết, khi phẫn nộ thì lạnh lùng, khi độc thoại nội tâm thì tự nhiên và sâu sắc.
+
+QUY TẮC TỪ HÁN-VIỆT VÀ TỪ CỔ:
+- Ưu tiên từ ngữ Hán-Việt mang sắc thái trang trọng, u buồn, hoài niệm hoặc kỳ vĩ tùy theo bầu không khí đoạn văn.
+- Ví dụ: "hoàng hôn" → tịch dương, "cô đơn" → cô tịch / u uất, "số phận" → vận mệnh / định mệnh, "trí nhớ" → ký ức, "nước mắt" → lệ hàm, "thời gian trôi qua" → tuế nguyệt thoi đưa...
+- Câu văn cần có nhịp điệu, có sự trầm bổng, tránh lối viết cụt ngủn hay diễn đạt theo kiểu ngôn ngữ nói hiện đại.
+
+QUY TẮC NGỮ CẢNH & DỊCH THOÁT Ý:
+- Luôn ghi nhớ dòng thời gian, không gian và tâm trạng xuyên suốt để không làm đứt gãy mạch cảm xúc.
+- Dịch thoát ý đắt giá và tinh tế thay vì dịch thô kệch từng chữ (word-by-word). 
+  + Ví dụ: các khái niệm mang tính ước lệ cao như "the woman" nên dịch thoát thành "người phụ nữ duy nhất" để lột tả vị trí độc tôn trong tâm trí nhân vật, hay "whole of her sex" dịch mượt mà là "tất cả những người phụ nữ khác" để phù hợp với văn phong tiếng Việt tự nhiên.
+  + Đối với câu phức dài tiếng Anh, hãy ngắt nghỉ hợp lý và kết hợp liên từ trôi chảy ("bị cuốn hút bởi... và dùng... để truy tìm... và làm sáng tỏ...") tạo cảm giác mạch lạc, cuốn hút như truyện trinh thám/văn học cổ điển thực thụ.
+
+VÍ DỤ VĂN BẢN VÀ BẢN DỊCH TIÊU CHUẨN (HỌC TẬP PHONG CÁCH):
+- EN: "To Sherlock Holmes she is always the woman."
+  -> VI: "Đối với Sherlock Holmes, cô ấy mãi mãi là người phụ nữ duy nhất."
+- EN: "I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex."
+  -> VI: "Tôi hiếm khi nghe anh ấy nhắc đến cô ấy bằng một cái tên nào khác. Trong mắt anh ấy, cô ấy làm lu mờ và nổi bật hơn tất cả những người phụ nữ khác."
+- EN: "He was still, as ever, deeply attracted by the study of crime, and occupied his immense faculties and extraordinary powers of observation in following out those clues, and clearing up those mysteries which had been abandoned as hopeless by the official police."
+  -> VI: "Anh ấy vẫn như mọi khi, bị cuốn hút sâu sắc bởi việc nghiên cứu tội phạm, và dùng năng lực to lớn cùng khả năng quan sát phi thường của mình để truy tìm những manh mối, và làm sáng tỏ những bí ẩn mà cảnh sát chính thức đã bỏ cuộc vì vô vọng."
+
+QUY TẮC ĐẦU RA:
+- Chỉ trả về JSON hợp lệ theo đúng format được yêu cầu trong user message.
+- Không giải thích, không thêm bớt ghi chú cá nhân.`
+
 
 type TranslatedItem = {
   id: string
@@ -25,36 +63,78 @@ export async function translateBlocks(
 ): Promise<DocumentBlock[]> {
   // Code blocks are never translated
   const translatableBlocks = blocks.filter(b => b.type !== 'code' && b.type !== 'image')
-  const chunkSize = config.provider === 'gemini' ? 120 : CHUNK_SIZE
+  const chunkSize = config.provider === 'gemini' ? 120 : config.provider === 'deepseek' ? 40 : CHUNK_SIZE
   const chunks = chunkArray(translatableBlocks, chunkSize)
   const result = [...blocks]
   let completed = 0
 
-  for (let i = 0; i < chunks.length; i++) {
-    if (signal?.aborted) break
+  // Xác định mức độ chạy song song (concurrency)
+  let concurrency = 1
+  if (config.provider === 'deepseek' || config.provider === 'openai') {
+    concurrency = 5
+  } else if (config.provider === 'claude') {
+    concurrency = 3
+  } else if (config.provider === 'gemini') {
+    const isGeminiFree = !config.geminiPaidApiKey
+    concurrency = isGeminiFree ? 1 : 5
+  }
 
-    if (i > 0 && config.provider === 'gemini') {
-      await delay(2000)
-    }
+  let index = 0
+  const workers: Promise<void>[] = []
 
-    const chunk = chunks[i]
-    const contextBefore = i > 0 ? chunks[i - 1][chunks[i - 1].length - 1]?.originalText : undefined
-    const contextAfter = i < chunks.length - 1 ? chunks[i + 1][0]?.originalText : undefined
+  async function worker() {
+    while (index < chunks.length) {
+      if (signal?.aborted) break
 
-    const translated = await translateChunkWithRetry(chunk, contextBefore, contextAfter, config, 0, signal)
+      const currentIdx = index++
+      const chunk = chunks[currentIdx]
 
-    for (const t of translated) {
-      const target = result.find(b => b.id === t.id)
-      if (target) {
-        target.translatedText = t.translatedText
-        if (t.cefrAnnotatedOriginal) target.cefrAnnotatedOriginal = t.cefrAnnotatedOriginal
-        if (t.cefrAnnotatedTranslation) target.cefrAnnotatedTranslation = t.cefrAnnotatedTranslation
+      // Gemini rate limit delay (chỉ áp dụng khi chạy tuần tự)
+      if (config.provider === 'gemini' && currentIdx > 0) {
+        const isGeminiFree = !config.geminiPaidApiKey
+        if (isGeminiFree) {
+          // Gemini Free: chờ 4.5 giây giữa các chunk để tránh chạm ngưỡng 15 RPM
+          await delay(4500)
+        } else if (concurrency === 1) {
+          await delay(1000)
+        }
+      }
+
+      const contextBefore = currentIdx > 0 ? chunks[currentIdx - 1][chunks[currentIdx - 1].length - 1]?.originalText : undefined
+      const contextAfter = currentIdx < chunks.length - 1 ? chunks[currentIdx + 1][0]?.originalText : undefined
+
+      try {
+        const translated = await translateChunkWithRetry(chunk, contextBefore, contextAfter, config, 0, signal)
+        
+        if (signal?.aborted) break
+
+        for (const t of translated) {
+          const target = result.find(b => b.id === t.id)
+          if (target) {
+            target.translatedText = t.translatedText
+            if (t.cefrAnnotatedOriginal) target.cefrAnnotatedOriginal = t.cefrAnnotatedOriginal
+            if (t.cefrAnnotatedTranslation) target.cefrAnnotatedTranslation = t.cefrAnnotatedTranslation
+          }
+        }
+
+        completed += chunk.length
+        onProgress(completed, translatableBlocks.length, translated)
+      } catch (err) {
+        console.error(`Lỗi khi dịch chunk ${currentIdx}:`, err)
+        if (err instanceof Error && err.name === 'AbortError') {
+          break
+        }
       }
     }
-
-    completed += chunk.length
-    onProgress(completed, translatableBlocks.length, translated)
   }
+
+  // Khởi động các worker song song
+  const numWorkers = Math.min(concurrency, chunks.length)
+  for (let w = 0; w < numWorkers; w++) {
+    workers.push(worker())
+  }
+
+  await Promise.all(workers)
 
   return result
 }
@@ -72,10 +152,34 @@ async function translateChunkWithRetry(
   } catch (err) {
     // AbortError không retry — trả lỗi lên để dừng vòng lặp
     if (err instanceof Error && err.name === 'AbortError') throw err
-    if (attempt < MAX_RETRIES) {
-      await delay(RETRY_DELAY_MS * (attempt + 1))
-      return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1, signal)
+
+    const isRateLimit = (e: any) => {
+      const msg = String(e?.message || e || '').toLowerCase()
+      return (
+        msg.includes('429') ||
+        msg.includes('resource_exhausted') ||
+        msg.includes('quota') ||
+        e?.status === 429
+      )
     }
+
+    if (isRateLimit(err)) {
+      const rateLimitRetries = 5
+      if (attempt < rateLimitRetries) {
+        const backoff = 20000 * (attempt + 1)
+        console.warn(
+          `[Gemini Rate Limit] Gặp lỗi giới hạn tần suất (429/Quota). Chờ ${backoff / 1000} giây trước khi thử lại (lần thử ${attempt + 1}/${rateLimitRetries})...`
+        )
+        await delay(backoff)
+        return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1, signal)
+      }
+    } else {
+      if (attempt < MAX_RETRIES) {
+        await delay(RETRY_DELAY_MS * (attempt + 1))
+        return translateChunkWithRetry(chunk, contextBefore, contextAfter, config, attempt + 1, signal)
+      }
+    }
+
     // Fallback: mark as untranslated rather than crash the whole document
     console.error('Translation chunk failed after retries:', err)
     return chunk.map(b => ({ id: b.id, translatedText: `[CHƯA DỊCH] ${b.originalText}` }))
@@ -89,7 +193,7 @@ async function callTranslationAPI(
   config: TranslationConfig,
   signal?: AbortSignal
 ): Promise<TranslatedItem[]> {
-  const prompt = buildPrompt(chunk, contextBefore, contextAfter, config.cefrAnnotation)
+  const prompt = buildPrompt(chunk, contextBefore, contextAfter, config.cefrAnnotation, config.provider)
   let rawText: string
 
   if (config.provider === 'deepseek' || config.provider === 'openai') {
@@ -98,19 +202,34 @@ async function callTranslationAPI(
       apiKey: config.apiKey,
       baseURL: config.provider === 'deepseek' ? 'https://api.deepseek.com' : undefined,
     })
-    const model =
-      config.model ||
-      (config.provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini')
 
-    const res = await client.chat.completions.create(
-      {
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-      },
-      { signal }
-    )
+    // Map friendly model names → actual DeepSeek API model names
+    let resolvedModel = config.model || (config.provider === 'deepseek' ? 'deepseek-v4-flash' : 'gpt-4o-mini')
+    if (config.provider === 'deepseek') {
+      if (resolvedModel === 'deepseek-v4-flash') resolvedModel = 'deepseek-chat'
+      else if (resolvedModel === 'deepseek-v4-pro') resolvedModel = 'deepseek-reasoner'
+    }
+
+    // deepseek-reasoner không hỗ trợ response_format: json_object
+    const isReasoner = resolvedModel === 'deepseek-reasoner'
+    const isDeepSeek = config.provider === 'deepseek'
+
+    // DeepSeek: tách system prompt (vai trò dịch giả văn học) + user message (quy tắc JSON + blocks)
+    const messages: { role: 'system' | 'user'; content: string }[] = isDeepSeek
+      ? [
+          { role: 'system', content: LITERARY_SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ]
+      : [{ role: 'user', content: prompt }]
+
+    const createParams: Parameters<typeof client.chat.completions.create>[0] = {
+      model: resolvedModel,
+      messages,
+      temperature: isReasoner ? undefined : 0.2,
+      ...(isReasoner ? {} : { response_format: { type: 'json_object' as const } }),
+    }
+
+    const res = (await client.chat.completions.create(createParams, { signal })) as any
     rawText = res.choices[0].message.content || '{}'
   } else if (config.provider === 'claude') {
     const { default: Anthropic } = await import('@anthropic-ai/sdk')
@@ -185,7 +304,8 @@ function buildPrompt(
   chunk: DocumentBlock[],
   contextBefore?: string,
   contextAfter?: string,
-  cefrAnnotation?: boolean
+  cefrAnnotation?: boolean,
+  provider?: string
 ): string {
   const items = chunk.map(b => ({
     id: b.id,
@@ -208,9 +328,15 @@ function buildPrompt(
     ? `{"translations": [{"id": "...", "translatedText": "...", "cefrAnnotatedOriginal": "...", "cefrAnnotatedTranslation": "..."}, ...]}`
     : `{"translations": [{"id": "...", "translatedText": "..."}, ...]}`
 
-  return `Bạn là chuyên gia dịch thuật hàng đầu với hơn 20 năm kinh nghiệm dịch sách, tài liệu học thuật và văn bản chuyên ngành từ tiếng Anh sang tiếng Việt. Bạn am hiểu sâu sắc cả hai nền văn hóa và ngôn ngữ, có khả năng truyền tải chính xác ý nghĩa, sắc thái, và văn phong của tác giả gốc vào tiếng Việt tự nhiên, trong sáng.
+  // Với DeepSeek: system prompt đã mang vai trò dịch giả văn học → user message chỉ cần rules JSON + blocks
+  // Với các provider khác: giữ nguyên prompt đầy đủ như cũ
+  const preamble = provider === 'deepseek'
+    ? `Hãy dịch các blocks sau từ tiếng Anh sang tiếng Việt theo đúng phong cách văn học đại tài đã được định sẵn trong vai trò của bạn.`
+    : `Bạn là chuyên gia dịch thuật hàng đầu với hơn 20 năm kinh nghiệm dịch sách, tài liệu học thuật và văn bản chuyên ngành từ tiếng Anh sang tiếng Việt. Bạn am hiểu sâu sắc cả hai nền văn hóa và ngôn ngữ, có khả năng truyền tải chính xác ý nghĩa, sắc thái, và văn phong của tác giả gốc vào tiếng Việt tự nhiên, trong sáng.`
 
-QUY TẮC DỊCH CHUYÊN NGHIỆP:
+  return `${preamble}
+
+QUY TẮC DỊCH:
 - Trả về JSON hợp lệ: ${responseFormat}
 - Dịch theo ngữ cảnh: hiểu toàn bộ đoạn văn trước khi dịch, không dịch từng từ rời rạc
 - Giữ giọng văn và phong cách của tác giả (trang trọng, thân mật, học thuật, kỹ thuật...)

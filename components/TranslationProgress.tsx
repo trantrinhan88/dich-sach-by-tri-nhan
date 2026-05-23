@@ -6,6 +6,7 @@ interface Props {
   completed: number
   total: number
   onPause: () => void
+  usingCache?: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -15,25 +16,35 @@ function formatTime(seconds: number): string {
   return `~${mins} phút ${secs}s`
 }
 
-export default function TranslationProgress({ completed, total, onPause }: Props) {
+export default function TranslationProgress({ completed, total, onPause, usingCache }: Props) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
-  const [startTime] = useState(() => Date.now())
+  const [firstCompletedValue, setFirstCompletedValue] = useState<number | null>(null)
+  const [firstChunkTime, setFirstChunkTime] = useState<number | null>(null)
   const [eta, setEta] = useState<number | null>(null)
 
   useEffect(() => {
-    if (completed > 10) { // Đợi dịch được một vài block để tính toán tốc độ chính xác hơn
-      const elapsedMs = Date.now() - startTime
-      const msPerItem = elapsedMs / completed
-      const remainingItems = total - completed
-      const remainingMs = remainingItems * msPerItem
-      setEta(Math.ceil(remainingMs / 1000))
-    } else if (completed > 0) {
-      // Ước lượng tạm thời lúc mới khởi động
-      const remainingItems = total - completed
-      const estimatedMs = remainingItems * 80 // Mỗi block dịch ~80ms (đã tối ưu hóa)
-      setEta(Math.ceil(estimatedMs / 1000))
+    if (completed > 0 && firstCompletedValue === null) {
+      setFirstCompletedValue(completed)
+      setFirstChunkTime(Date.now())
     }
-  }, [completed, total, startTime])
+  }, [completed, firstCompletedValue])
+
+  useEffect(() => {
+    if (completed > 0) {
+      const remainingItems = total - completed
+      if (firstCompletedValue !== null && firstChunkTime !== null && completed > firstCompletedValue) {
+        const elapsedMs = Date.now() - firstChunkTime
+        const itemsAfterFirst = completed - firstCompletedValue
+        const msPerItem = elapsedMs / itemsAfterFirst
+        const remainingMs = remainingItems * msPerItem
+        setEta(Math.ceil(remainingMs / 1000))
+      } else {
+        // Ước lượng tạm thời lúc mới khởi động (khoảng 150ms/item cho Gemini 2.5 Flash)
+        const estimatedMs = remainingItems * 150
+        setEta(Math.ceil(estimatedMs / 1000))
+      }
+    }
+  }, [completed, total, firstCompletedValue, firstChunkTime])
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
@@ -44,6 +55,12 @@ export default function TranslationProgress({ completed, total, onPause }: Props
             <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
           </span>
           <span className="text-white font-semibold tracking-wide">Đang dịch sách...</span>
+          {usingCache && (
+            <span className="text-[10px] px-2.5 py-0.5 bg-green-500/15 border border-green-500/25 text-green-300 rounded-full font-bold tracking-wide flex items-center gap-1">
+              <span>⚡</span>
+              <span>Context Cache (paid key)</span>
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-blue-400 font-mono font-bold text-sm bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">{pct}%</span>

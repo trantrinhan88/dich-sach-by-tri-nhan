@@ -43,6 +43,13 @@ export interface TranslationConfig {
   model?: string
   cefrAnnotation?: boolean
   cacheName?: string
+  
+  // Custom keys for separate model configurations
+  geminiFreeApiKey?: string
+  geminiPaidApiKey?: string
+  deepseekApiKey?: string
+  openaiApiKey?: string
+  claudeApiKey?: string
 }
 
 export interface ParseResult {
