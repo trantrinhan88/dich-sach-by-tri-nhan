@@ -50,6 +50,10 @@ export interface TranslationConfig {
   deepseekApiKey?: string
   openaiApiKey?: string
   claudeApiKey?: string
+
+  // Cấu hình nâng cao cho tốc độ dịch
+  concurrency?: number
+  chunkSize?: number
 }
 
 export interface ParseResult {

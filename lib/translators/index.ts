@@ -68,15 +68,17 @@ export async function translateBlocks(
   const translatableBlocks = blocks.filter(b => b.type !== 'code' && b.type !== 'image')
   
   // Xác định kích thước chunk tối ưu theo nhà cung cấp và mô hình
-  let chunkSize = CHUNK_SIZE
-  if (config.provider === 'gemini') {
-    chunkSize = 120
-  } else if (config.provider === 'deepseek') {
-    const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
-    chunkSize = isReasoner ? 10 : 15
-  } else {
-    // Các provider khác (OpenAI, Claude...)
-    chunkSize = 25
+  let chunkSize = config.chunkSize || CHUNK_SIZE
+  if (!config.chunkSize) {
+    if (config.provider === 'gemini') {
+      chunkSize = 120
+    } else if (config.provider === 'deepseek') {
+      const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
+      chunkSize = isReasoner ? 10 : 30 // Tăng mặc định từ 15 lên 30 câu cho deepseek-chat
+    } else {
+      // Các provider khác (OpenAI, Claude...)
+      chunkSize = 25
+    }
   }
   
   const chunks = chunkArray(translatableBlocks, chunkSize)
@@ -85,17 +87,19 @@ export async function translateBlocks(
   let fatalError: Error | null = null
 
   // Xác định mức độ chạy song song (concurrency)
-  let concurrency = 1
-  if (config.provider === 'deepseek') {
-    const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
-    concurrency = isReasoner ? 1 : 2 // Pro dùng 1 luồng, Flash dùng 2 luồng để tránh quá tải DeepSeek API
-  } else if (config.provider === 'openai') {
-    concurrency = 5
-  } else if (config.provider === 'claude') {
-    concurrency = 3
-  } else if (config.provider === 'gemini') {
-    const isGeminiFree = !config.geminiPaidApiKey
-    concurrency = isGeminiFree ? 1 : 5
+  let concurrency = config.concurrency || 1
+  if (!config.concurrency) {
+    if (config.provider === 'deepseek') {
+      const isReasoner = config.model === 'deepseek-v4-pro' || config.model === 'deepseek-reasoner'
+      concurrency = isReasoner ? 1 : 4 // Tăng mặc định từ 2 lên 4 luồng cho deepseek-chat
+    } else if (config.provider === 'openai') {
+      concurrency = 5
+    } else if (config.provider === 'claude') {
+      concurrency = 3
+    } else if (config.provider === 'gemini') {
+      const isGeminiFree = !config.geminiPaidApiKey
+      concurrency = isGeminiFree ? 1 : 5
+    }
   }
 
   let index = 0

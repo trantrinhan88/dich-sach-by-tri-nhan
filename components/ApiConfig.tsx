@@ -49,6 +49,9 @@ export default function ApiConfig({ onConfigChange }: Props) {
   const [cefrAnnotation, setCefrAnnotation] = useState(false)
   const [envStatus, setEnvStatus] = useState<'idle' | 'saving' | 'loading' | 'saved' | 'loaded' | 'error'>('idle')
   const [showEnvPanel, setShowEnvPanel] = useState(false)
+  const [concurrency, setConcurrency] = useState<number | ''>('')
+  const [chunkSize, setChunkSize] = useState<number | ''>('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [envKeys, setEnvKeys] = useState<Record<string, string>>({
     DEEPSEEK_API_KEY: '',
     GEMINI_API_KEY: '',
@@ -75,6 +78,8 @@ export default function ApiConfig({ onConfigChange }: Props) {
         setApiKey(cfg.apiKey)
         setModel(cfg.model || '')
         setCefrAnnotation(cfg.cefrAnnotation ?? false)
+        setConcurrency(cfg.concurrency ?? '')
+        setChunkSize(cfg.chunkSize ?? '')
         
         // Load and migrate individual keys
         setDeepseekApiKey(cfg.deepseekApiKey || (cfg.provider === 'deepseek' ? cfg.apiKey : ''))
@@ -111,6 +116,8 @@ export default function ApiConfig({ onConfigChange }: Props) {
       geminiPaidApiKey: geminiPaidApiKey.trim() || undefined,
       openaiApiKey: openaiApiKey.trim() || undefined,
       claudeApiKey: claudeApiKey.trim() || undefined,
+      concurrency: concurrency ? Number(concurrency) : undefined,
+      chunkSize: chunkSize ? Number(chunkSize) : undefined,
     }
     
     localStorage.setItem(LS_KEY, JSON.stringify(cfg))
@@ -129,6 +136,8 @@ export default function ApiConfig({ onConfigChange }: Props) {
     setClaudeApiKey('')
     setModel('')
     setCefrAnnotation(false)
+    setConcurrency('')
+    setChunkSize('')
     onConfigChange(null)
     setOpen(true)
   }
@@ -186,6 +195,24 @@ export default function ApiConfig({ onConfigChange }: Props) {
       setEnvStatus('error')
       setTimeout(() => setEnvStatus('idle'), 2000)
     }
+  }
+
+  const getDefaultSpeedHint = () => {
+    if (provider === 'gemini') {
+      const isPaid = !!geminiPaidApiKey.trim()
+      return { threads: isPaid ? 5 : 1, size: 120, note: isPaid ? 'Gemini Paid' : 'Gemini Free' }
+    }
+    if (provider === 'deepseek') {
+      const isReasoner = model === 'deepseek-v4-pro' || model === 'deepseek-reasoner'
+      return { threads: isReasoner ? 1 : 4, size: isReasoner ? 10 : 30, note: isReasoner ? 'DeepSeek Reasoner (R1)' : 'DeepSeek Chat (V3)' }
+    }
+    if (provider === 'openai') {
+      return { threads: 5, size: 25, note: 'OpenAI' }
+    }
+    if (provider === 'claude') {
+      return { threads: 3, size: 25, note: 'Claude' }
+    }
+    return { threads: 2, size: 25, note: '' }
   }
 
   const envStatusLabel = {
@@ -362,6 +389,101 @@ export default function ApiConfig({ onConfigChange }: Props) {
             <p className="text-xs text-gray-500 mt-1.5 pl-13">
               Đánh dấu màu từ vựng tiếng Anh &amp; tiếng Việt theo trình độ CEFR trong file xuất. Dịch chậm hơn một chút.
             </p>
+          </div>
+
+          {/* Advanced Settings */}
+          <div className="border-t border-gray-700 pt-4">
+            <button
+              onClick={() => setShowAdvanced(v => !v)}
+              type="button"
+              className="flex items-center justify-between w-full text-sm text-gray-300 hover:text-white font-medium mb-2"
+            >
+              <span>⚙️ Tùy chỉnh tốc độ dịch (Nâng cao)</span>
+              <span className="text-gray-500 text-xs">{showAdvanced ? 'Ẩn ▲' : 'Hiện ▼'}</span>
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-3 bg-gray-950/40 p-4 rounded-xl border border-gray-800 space-y-4">
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Thiết lập số luồng chạy song song và kích thước gói câu gửi lên AI. Tăng các trị số này giúp dịch nhanh hơn đáng kể, nhưng có thể bị lỗi giới hạn (Rate Limit / 429) nếu tài khoản của bạn chưa nạp tiền hoặc bị giới hạn API.
+                </p>
+
+                <div className="bg-gray-900/50 p-2.5 rounded-lg text-[11px] text-blue-300 border border-blue-500/10 flex justify-between">
+                  <span>Mặc định hệ thống đề xuất:</span>
+                  <span className="font-semibold">
+                    {getDefaultSpeedHint().threads} luồng · {getDefaultSpeedHint().size} câu ({getDefaultSpeedHint().note})
+                  </span>
+                </div>
+
+                {/* Concurrency (Threads) */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="text-gray-300 font-medium">Số luồng dịch song song (Concurrency)</label>
+                    <span className="text-blue-400 font-mono font-bold">
+                      {concurrency === '' ? `${getDefaultSpeedHint().threads} (Mặc định)` : `${concurrency} luồng`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={concurrency === '' ? getDefaultSpeedHint().threads : concurrency}
+                    onChange={e => setConcurrency(Number(e.target.value))}
+                    className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-500 px-0.5">
+                    <span>1 luồng (Ổn định)</span>
+                    <span>5 luồng</span>
+                    <span>10 luồng (Rất nhanh)</span>
+                  </div>
+                  {Number(concurrency || getDefaultSpeedHint().threads) > 5 && (
+                    <p className="text-[10px] text-yellow-500/80 leading-relaxed">
+                      ⚠️ Cảnh báo: Tăng &gt; 5 luồng có thể dễ bị lỗi Rate Limit (429) từ API nếu tài khoản không đủ hạn mức lớn.
+                    </p>
+                  )}
+                </div>
+
+                {/* Chunk Size */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="text-gray-300 font-medium">Số câu trong một gói dịch (Chunk Size)</label>
+                    <span className="text-blue-400 font-mono font-bold">
+                      {chunkSize === '' ? `${getDefaultSpeedHint().size} (Mặc định)` : `${chunkSize} câu / gói`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="120"
+                    step="5"
+                    value={chunkSize === '' ? getDefaultSpeedHint().size : chunkSize}
+                    onChange={e => setChunkSize(Number(e.target.value))}
+                    className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-500 px-0.5">
+                    <span>5 câu (Ngữ cảnh ngắn)</span>
+                    <span>40 câu</span>
+                    <span>120 câu (Ngữ cảnh dài)</span>
+                  </div>
+                  {Number(chunkSize || getDefaultSpeedHint().size) > 60 && provider === 'deepseek' && (
+                    <p className="text-[10px] text-yellow-500/80 leading-relaxed">
+                      ⚠️ Cảnh báo: DeepSeek dịch tốt nhất ở kích thước gói nhỏ (&lt;= 40 câu). Kích thước quá lớn dễ gây tràn context hoặc lỗi JSON đầu ra.
+                    </p>
+                  )}
+                </div>
+
+                {/* Action button to reset */}
+                {(concurrency !== '' || chunkSize !== '') && (
+                  <button
+                    onClick={() => { setConcurrency(''); setChunkSize('') }}
+                    type="button"
+                    className="text-[11px] text-gray-400 hover:text-white underline transition-colors"
+                  >
+                    Khôi phục về mặc định đề xuất
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Env file management */}
