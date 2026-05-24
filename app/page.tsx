@@ -42,6 +42,8 @@ function expandForBilingual(blocks: DocumentBlock[]): DocumentBlock[] {
   return result
 }
 
+export type SplitMode = 'combined' | 'file' | 'heading12' | 'heading123'
+
 interface ChapterInfo {
   href: string // Unique identifier for the chapter
   title: string
@@ -51,7 +53,43 @@ interface ChapterInfo {
   firstBlockIndex: number
 }
 
-function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
+function applySplitMode(docBlocks: DocumentBlock[], splitMode: SplitMode): DocumentBlock[] {
+  let currentChapterHref = 'intro'
+  let lastHref = ''
+  
+  return docBlocks.map(block => {
+    const blockHref = (block.metadata?.chapterHref as string) || 'default_chapter'
+    
+    let shouldSplit = false
+    if (splitMode === 'file') {
+      shouldSplit = lastHref !== '' && lastHref !== blockHref
+    } else if (splitMode === 'heading12') {
+      shouldSplit = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+    } else if (splitMode === 'heading123') {
+      shouldSplit = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2 || block.style.level === 3)
+    } else { // combined
+      const isNewFile = lastHref !== '' && lastHref !== blockHref
+      const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+      shouldSplit = isNewFile || isNewHeading
+    }
+    
+    if (shouldSplit) {
+      currentChapterHref = `chapter_${block.id}`
+    }
+    
+    lastHref = blockHref
+    
+    return {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        chapterHref: currentChapterHref
+      }
+    }
+  })
+}
+
+function getChapters(docBlocks: DocumentBlock[], splitMode: SplitMode = 'combined'): ChapterInfo[] {
   const chapters: ChapterInfo[] = []
   let currentChapter: ChapterInfo = {
     href: 'intro',
@@ -66,10 +104,21 @@ function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
 
   docBlocks.forEach((block, index) => {
     const blockHref = (block.metadata?.chapterHref as string) || 'default_chapter'
-    const isNewFile = lastHref !== '' && lastHref !== blockHref
-    const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+    
+    let isNewChapter = false
+    if (splitMode === 'file') {
+      isNewChapter = lastHref !== '' && lastHref !== blockHref
+    } else if (splitMode === 'heading12') {
+      isNewChapter = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+    } else if (splitMode === 'heading123') {
+      isNewChapter = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2 || block.style.level === 3)
+    } else { // combined
+      const isNewFile = lastHref !== '' && lastHref !== blockHref
+      const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+      isNewChapter = isNewFile || isNewHeading
+    }
 
-    if (isNewFile || isNewHeading) {
+    if (isNewChapter) {
       // Save previous chapter if it had blocks
       if (currentChapter.blocksCount > 0) {
         chapters.push({
@@ -80,7 +129,7 @@ function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
 
       currentChapter = {
         href: block.id, // Dùng ID của block làm định danh chương duy nhất
-        title: isNewHeading ? block.originalText : `Chương ${chapters.length + 1}`,
+        title: block.type === 'heading' ? block.originalText : `Chương ${chapters.length + 1}`,
         blocksCount: 0,
         translatedCount: 0,
         isCompleted: false,
@@ -108,17 +157,28 @@ function getChapters(docBlocks: DocumentBlock[]): ChapterInfo[] {
   return chapters.filter(c => c.blocksCount > 0)
 }
 
-function getBlockChapterMap(docBlocks: DocumentBlock[]): Record<string, string> {
+function getBlockChapterMap(docBlocks: DocumentBlock[], splitMode: SplitMode = 'combined'): Record<string, string> {
   const map: Record<string, string> = {}
   let currentChapterId = 'intro'
   let lastHref = ''
 
   docBlocks.forEach((block) => {
     const blockHref = (block.metadata?.chapterHref as string) || 'default_chapter'
-    const isNewFile = lastHref !== '' && lastHref !== blockHref
-    const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+    
+    let isNewChapter = false
+    if (splitMode === 'file') {
+      isNewChapter = lastHref !== '' && lastHref !== blockHref
+    } else if (splitMode === 'heading12') {
+      isNewChapter = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+    } else if (splitMode === 'heading123') {
+      isNewChapter = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2 || block.style.level === 3)
+    } else { // combined
+      const isNewFile = lastHref !== '' && lastHref !== blockHref
+      const isNewHeading = block.type === 'heading' && (block.style.level === 1 || block.style.level === 2)
+      isNewChapter = isNewFile || isNewHeading
+    }
 
-    if (isNewFile || isNewHeading) {
+    if (isNewChapter) {
       currentChapterId = block.id
     }
 
@@ -144,6 +204,7 @@ export default function Home() {
   const [bilingual, setBilingual] = useState(false)
   const [isCaching, setIsCaching] = useState(false)
   const [activeTab, setActiveTab] = useState<'translate' | 'read' | 'vocab'>('translate')
+  const [splitMode, setSplitMode] = useState<SplitMode>('combined')
   const abortRef = useRef<AbortController | null>(null)
   const cacheNameRef = useRef<string | null>(null)
 
@@ -423,11 +484,12 @@ export default function Home() {
     setStep('ready')
     setPartialTranslated([])
     setError('')
+    setSplitMode('combined')
   }
 
   const handleResetChapterTranslation = (chapterId: string) => {
     if (confirm('Bạn có chắc chắn muốn xóa bản dịch hiện tại của chương này để dịch lại?')) {
-      const chapterMap = getBlockChapterMap(blocks)
+      const chapterMap = getBlockChapterMap(blocks, splitMode)
       setBlocks(prev =>
         prev.map(b =>
           chapterMap[b.id] === chapterId
@@ -583,8 +645,9 @@ export default function Home() {
 
     setStep('translating')
 
-    const workingBlocks = bilingual ? expandForBilingual(blocks) : blocks
-    const chapterMap = getBlockChapterMap(workingBlocks)
+    const splitBlocks = applySplitMode(blocks, splitMode)
+    const workingBlocks = bilingual ? expandForBilingual(splitBlocks) : splitBlocks
+    const chapterMap = getBlockChapterMap(workingBlocks, splitMode)
     
     // Chỉ dịch các câu thuộc chương được chọn và chưa được dịch (hoặc đã được reset)
     const remaining = workingBlocks.filter(b => {
@@ -656,7 +719,7 @@ export default function Home() {
   const handleResume = async () => {
     if (!apiConfig) { setError('Vui lòng cài đặt API key trước.'); return }
 
-    const chapterMap = getBlockChapterMap(partialTranslated)
+    const chapterMap = getBlockChapterMap(partialTranslated, splitMode)
     const remaining = partialTranslated.filter(b => {
       const chapterId = chapterMap[b.id] || 'intro'
       const isChapterSelected = selectedChapters.includes(chapterId)
@@ -1176,7 +1239,7 @@ export default function Home() {
                   <div className="flex items-center gap-3">
                     <h3 className="text-sm font-bold text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
                     {blocks.length > 0 && (() => {
-                      const chs = getChapters(blocks)
+                      const chs = getChapters(blocks, splitMode)
                       const allSelected = chs.length > 0 && chs.every(ch => selectedChapters.includes(ch.href))
                       return (
                         <button
@@ -1200,10 +1263,37 @@ export default function Home() {
                   </p>
                 </div>
 
-
+                {/* Active Chapter Splitting Selector */}
+                {fileType === 'epub' && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/5 p-4 rounded-xl border border-white/5 shadow-inner">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                        ⚙️ Chế độ phân chia chương
+                      </label>
+                      <p className="text-[11px] text-gray-400 font-light">
+                        Lựa chọn cách thức gom nhóm nội dung thành từng chương phù hợp nhất với cấu trúc của sách.
+                      </p>
+                    </div>
+                    <select
+                      value={splitMode}
+                      onChange={(e) => {
+                        const newMode = e.target.value as SplitMode
+                        setSplitMode(newMode)
+                        // Reset selected chapters to match new layout
+                        setSelectedChapters([])
+                      }}
+                      className="bg-black/45 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-all font-medium cursor-pointer"
+                    >
+                      <option value="combined">Kết hợp cả File & Tiêu đề (Mặc định)</option>
+                      <option value="file">Chỉ theo cấu trúc File gốc (XHTML)</option>
+                      <option value="heading12">Theo tiêu đề lớn (H1, H2)</option>
+                      <option value="heading123">Theo tất cả tiêu đề (H1, H2, H3)</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-xl bg-black/25">
-                  {getChapters(blocks).map((ch) => {
+                  {getChapters(blocks, splitMode).map((ch) => {
                     const isSelected = selectedChapters.includes(ch.href)
                     const percent = ch.blocksCount > 0 ? Math.round((ch.translatedCount / ch.blocksCount) * 100) : 0
                     

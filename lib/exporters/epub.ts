@@ -106,34 +106,61 @@ strong { font-weight: bold; }
 ${bilingualCSS}${cefrCSS}`
   )
 
-  // Split blocks into sections (chapters) based on heading level <= 2
+  // Split blocks into sections (chapters)
   const sections: {
     id: string
     title: string
     blocks: DocumentBlock[]
   }[] = []
 
+  const hasChapterHref = blocks.some(b => b.metadata?.chapterHref)
   let currentSectionBlocks: DocumentBlock[] = []
+  let currentHref: string | null = null
   let sectionCount = 0
 
   for (const block of blocks) {
-    const isNewSectionHeading = block.type === 'heading' && (block.style.level || 1) <= 2
-    if (isNewSectionHeading && currentSectionBlocks.length > 0) {
+    let shouldSplit = false
+
+    if (hasChapterHref) {
+      const blockHref = (block.metadata?.chapterHref as string) || ''
+      if (currentHref !== null && blockHref !== currentHref) {
+        shouldSplit = true
+      }
+      currentHref = blockHref
+    } else {
+      const isNewSectionHeading = block.type === 'heading' && (block.style.level || 1) <= 2
+      if (isNewSectionHeading) {
+        shouldSplit = true
+      }
+    }
+
+    if (shouldSplit && currentSectionBlocks.length > 0) {
+      const firstHeading = currentSectionBlocks.find(b => b.type === 'heading')
+      const secTitle = firstHeading
+        ? (firstHeading.translatedText || firstHeading.originalText)
+        : `Chương ${sectionCount + 1}`
+
       sections.push({
         id: `section_${sectionCount}`,
-        title: sectionCount === 0 ? 'Mở đầu' : (currentSectionBlocks[0].translatedText || currentSectionBlocks[0].originalText || `Mục ${sectionCount}`),
+        title: secTitle,
         blocks: currentSectionBlocks,
       })
       currentSectionBlocks = []
       sectionCount++
     }
+
     currentSectionBlocks.push(block)
   }
 
   if (currentSectionBlocks.length > 0) {
+    const firstHeading = currentSectionBlocks.find(b => b.type === 'heading')
+    const secTitle = firstHeading
+      ? (firstHeading.translatedText || firstHeading.originalText)
+      : `Chương ${sectionCount + 1}`
+
     sections.push({
       id: `section_${sectionCount}`,
-      title: sectionCount === 0 ? 'Mở đầu' : (currentSectionBlocks[0].type === 'heading' ? (currentSectionBlocks[0].translatedText || currentSectionBlocks[0].originalText) : `Mục ${sectionCount}`),
+      title: secTitle,
       blocks: currentSectionBlocks,
     })
   }
