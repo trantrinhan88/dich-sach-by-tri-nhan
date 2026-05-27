@@ -47,58 +47,58 @@ export default function TranslationProgress({ completed, total, onPause, usingCa
   }, [completed, total, firstCompletedValue, firstChunkTime])
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
+    <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[18px] p-6 shadow-sm space-y-5 select-none transition-colors duration-300">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0066cc] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066cc]"></span>
           </span>
-          <span className="text-white font-semibold tracking-wide">Đang dịch sách...</span>
+          <span className="text-gray-900 dark:text-white font-bold text-sm tracking-tight">Đang tiến hành dịch thuật...</span>
           {usingCache && (
-            <span className="text-[10px] px-2.5 py-0.5 bg-green-500/15 border border-green-500/25 text-green-300 rounded-full font-bold tracking-wide flex items-center gap-1">
+            <span className="text-[9px] px-2.5 py-0.5 bg-green-500/10 border border-green-500/10 text-green-700 dark:text-green-300 rounded-full font-bold tracking-widest uppercase flex items-center gap-1">
               <span>⚡</span>
-              <span>Context Cache (paid key)</span>
+              <span>Context Cache (Paid)</span>
             </span>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-blue-400 font-mono font-bold text-sm bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">{pct}%</span>
+          <span className="text-[#0066cc] dark:text-[#2997ff] font-mono font-bold text-xs bg-[#0066cc]/10 px-3 py-1 rounded-full border border-[#0066cc]/10">{pct}%</span>
           <button
             onClick={onPause}
-            className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white text-xs rounded-xl font-semibold shadow-lg shadow-yellow-600/15 transition-all duration-300 transform active:scale-95"
+            className="px-5 py-2 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-black/5 border border-black/10 dark:border-white/5 rounded-full text-xs font-bold transition-all active-scale shadow-sm"
           >
             ⏸ Tạm dừng
           </button>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+      {/* Stunning iPhone Neon Gradient Progress bar */}
+      <div className="h-2.5 bg-black/5 dark:bg-black/40 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/5 shadow-inner">
         <div
-          className="h-full bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 rounded-full transition-all duration-500 ease-out"
+          className="h-full bg-iphone-neon rounded-full transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <p className="text-gray-300 text-sm flex items-center justify-between font-light">
+      <p className="text-gray-600 dark:text-gray-300 text-xs flex items-center justify-between font-light">
         <span>
-          Đã hoàn thành <span className="text-white font-medium">{completed}</span> / <span className="text-gray-400 font-medium">{total}</span> câu
+          Đã hoàn thành <strong className="text-gray-900 dark:text-white font-semibold">{completed}</strong> / <span className="text-gray-400">{total}</span> câu song ngữ
         </span>
         {total > 0 && completed < total && eta !== null && (
-          <span className="text-blue-300 font-medium bg-blue-500/5 border border-blue-500/10 px-3 py-1 rounded-lg text-xs backdrop-blur-md">
-            ⏱ Thời gian còn lại: {formatTime(eta)}
+          <span className="text-[#0066cc] dark:text-[#2997ff] font-semibold bg-[#0066cc]/5 dark:bg-[#2997ff]/5 border border-[#0066cc]/10 dark:border-[#2997ff]/10 px-3.5 py-1 rounded-full text-[10px] tracking-wide uppercase">
+            ⏱ Ước tính còn: {formatTime(eta)}
           </span>
         )}
       </p>
 
-      {/* Animated dots */}
-      <div className="flex gap-1.5 pt-1">
+      {/* Compact pulsing dots */}
+      <div className="flex gap-1.5 pt-1.5 justify-center">
         {[0, 1, 2].map(i => (
           <div
             key={i}
-            className="w-1.5 h-1.5 bg-gradient-to-tr from-blue-400 to-indigo-400 rounded-full animate-bounce"
-            style={{ animationDelay: `${i * 0.15}s` }}
+            className="w-1.5 h-1.5 bg-iphone-neon rounded-full animate-bounce"
+            style={{ animationDelay: `${i * 0.15}s`, background: i === 0 ? '#0066cc' : i === 1 ? '#5856d6' : '#ff2d55' }}
           />
         ))}
       </div>

@@ -443,16 +443,18 @@ export default function DocumentPreview({
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg)
-    setTimeout(() => setToastMsg(null), 3000)
+    setTimeout(() => {
+      setToastMsg(null)
+    }, 3000)
   }
 
   return (
-    <div className="space-y-5 relative">
+    <div className="space-y-6 relative">
       {/* Floating Selection Bubble (Mouse drag select) */}
       {selection && (
         <button
           onClick={handleSaveSelection}
-          className="absolute z-40 px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-500/30 flex items-center gap-1.5 transform -translate-x-1/2 -translate-y-full border border-blue-400/20 transition-all scale-100 animate-in fade-in zoom-in duration-150"
+          className="absolute z-40 px-5 py-2 bg-iphone-neon text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1.5 transform -translate-x-1/2 -translate-y-full border border-white/10 active-scale duration-150 animate-in fade-in zoom-in"
           style={{ left: `${selection.x}px`, top: `${selection.y}px` }}
         >
           <span>💾</span>
@@ -460,31 +462,31 @@ export default function DocumentPreview({
         </button>
       )}
 
-      {/* Double Click Dictionary Lookup Popup */}
+      {/* Double Click Dictionary Lookup Popup (Apple Glassmorphic Style) */}
       {lookupWord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm dict-popup-overlay">
-          <div className="relative w-full max-w-sm rounded-3xl p-6 border border-indigo-100/30 dict-popup-content space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md dict-popup-overlay">
+          <div className="relative w-full max-w-sm rounded-[24px] p-6 border border-black/5 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-2xl dict-popup-content space-y-4 transition-colors">
             {/* Close Button */}
             <button
               onClick={() => setLookupWord(null)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors active-scale text-xs"
             >
               ✕
             </button>
 
             {lookupLoading ? (
               <div className="py-8 flex flex-col items-center justify-center space-y-3">
-                <span className="text-3xl animate-spin">🌀</span>
-                <p className="text-xs text-slate-500 font-light">Đang tra cứu từ điển AI...</p>
+                <span className="text-3xl animate-spin text-[#0066cc]">🌀</span>
+                <p className="text-xs text-gray-500 font-light">Đang phân tích từ vựng bằng AI...</p>
               </div>
             ) : lookupError ? (
-              <div className="py-4 space-y-3">
-                <div className="text-center text-3xl">⚠️</div>
-                <p className="text-sm text-red-500 text-center font-medium leading-relaxed">{lookupError}</p>
+              <div className="py-4 space-y-3 text-center">
+                <div className="text-3xl">⚠️</div>
+                <p className="text-sm text-red-600 dark:text-red-400 font-bold leading-relaxed">{lookupError}</p>
                 <div className="flex justify-center pt-2">
                   <button
                     onClick={() => handleWordDoubleClick(lookupWord, lookupContext!)}
-                    className="px-5 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 transition-all active:scale-95 shadow-md shadow-indigo-600/10"
+                    className="px-5 py-2.5 bg-[#0066cc] text-white text-xs font-bold rounded-full hover:bg-[#0071e3] transition-all active-scale shadow-sm"
                   >
                     Thử lại
                   </button>
@@ -492,36 +494,36 @@ export default function DocumentPreview({
               </div>
             ) : lookupResult ? (
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase tracking-wider font-mono bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
-                    Từ vựng mới
+                <div className="space-y-2">
+                  <span className="text-[9px] uppercase tracking-widest font-mono bg-[#0066cc]/10 text-[#0066cc] dark:text-[#2997ff] px-2.5 py-0.5 rounded-full font-bold border border-[#0066cc]/10">
+                    Từ điển AI
                   </span>
                   <div className="flex items-center gap-2 pt-1">
-                    <h4 className="text-2xl font-serif font-bold text-slate-900 leading-none">
+                    <h4 className="text-2xl font-serif font-bold text-gray-900 dark:text-white leading-none">
                       {lookupResult.word}
                     </h4>
                     <button
                       onClick={() => {
-                        const utterance = new SpeechSynthesisUtterance(lookupResult.word)
-                        utterance.lang = 'en-US'
-                        window.speechSynthesis.speak(utterance)
+                        const utterance = new SpeechSynthesisUtterance(lookupResult.word);
+                        utterance.lang = 'en-US';
+                        window.speechSynthesis.speak(utterance);
                       }}
-                      className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors active:scale-90"
-                      title="Phát âm tiếng Anh"
+                      className="p-1.5 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-all active-scale"
+                      title="Phát âm"
                     >
                       🔊
                     </button>
                   </div>
                   {lookupResult.ipa && (
-                    <p className="text-sm font-mono text-indigo-600 font-semibold">
+                    <p className="text-sm font-mono text-[#0066cc] dark:text-[#2997ff] font-bold">
                       {lookupResult.ipa}
                     </p>
                   )}
                 </div>
 
-                <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100/50">
-                  <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider block mb-1">Nghĩa tiếng Việt</span>
-                  <p className="text-sm text-slate-700 leading-relaxed font-serif">
+                <div className="bg-[#f5f5f7] dark:bg-black/30 rounded-xl p-4 border border-black/5 dark:border-white/5">
+                  <span className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider block mb-1">Nghĩa tiếng Việt</span>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-serif">
                     {lookupResult.meaning}
                   </p>
                 </div>
@@ -533,19 +535,18 @@ export default function DocumentPreview({
                         lookupResult.word, 
                         lookupContext.originalText, 
                         lookupContext.translatedText || lookupContext.originalText
-                      )
+                      );
                       if (added) {
-                        triggerToast(`💾 Đã lưu từ: "${lookupResult.word}" vào Sổ tay!`)
+                        triggerToast(`💾 Đã lưu từ: "${lookupResult.word}" vào Sổ tay!`);
                       } else {
-                        triggerToast(`⚠️ Từ này đã tồn tại trong Sổ tay của bạn.`)
+                        triggerToast(`⚠️ Từ này đã tồn tại trong Sổ tay của bạn.`);
                       }
-                      setLookupWord(null)
+                      setLookupWord(null);
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-2xl border border-blue-400/20 shadow-lg shadow-blue-500/15 transition-all active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-iphone-neon hover:bg-iphone-neon-hover text-white text-xs font-bold rounded-full transition-all active-scale shadow-lg"
                 >
-                  <span>📓</span>
-                  <span>Thêm vào Sổ tay từ vựng</span>
+                  <span>📓 Thêm vào Sổ tay từ vựng</span>
                 </button>
               </div>
             ) : null}
@@ -555,56 +556,68 @@ export default function DocumentPreview({
 
       {/* Floating Success Toast */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-gray-900 border border-green-500/30 text-green-300 text-sm font-semibold rounded-2xl shadow-2xl shadow-black/50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-6 duration-200">
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-[#fafafc] dark:bg-[#272729] border border-black/5 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-6 duration-200 select-none">
           <span>✅</span>
           <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* Control Panel */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white/5 backdrop-blur-md rounded-2xl px-5 py-4 border border-white/10 shadow-lg">
+      {/* Control Panel (Apple Card) */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[18px] px-6 py-4 shadow-sm select-none transition-colors duration-300">
         <div className="flex items-center gap-3">
           {onBackToLibrary && (
             <button
               onClick={onBackToLibrary}
-              className="mr-2 text-xs px-3 py-1.5 bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white rounded-xl border border-white/5 font-bold transition-all shrink-0 active:scale-95 flex items-center gap-1 shadow-md"
+              className="mr-2 text-xs px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-full border border-black/5 dark:border-white/5 font-bold transition-all shrink-0 active-scale flex items-center gap-1 shadow-sm"
             >
               <span>◀</span>
               <span>Thư viện</span>
             </button>
           )}
-          <span className="text-gray-400 text-sm font-light">
-            Sách có <span className="text-white font-medium">{blocks.length}</span> đoạn văn
+          <span className="text-gray-500 dark:text-gray-400 text-xs font-light">
+            Sách có <strong className="text-gray-800 dark:text-white font-semibold">{blocks.length}</strong> đoạn văn
           </span>
           {untranslatedCount > 0 && (
-            <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2.5 py-0.5 rounded-full border border-yellow-500/10">
+            <span className="text-[10px] text-yellow-700 dark:text-yellow-300 bg-yellow-500/10 px-2.5 py-0.5 rounded-full border border-yellow-500/15 font-semibold">
               {untranslatedCount} đoạn chưa dịch
             </span>
           )}
         </div>
 
-        <div className="flex gap-2">
-          {/* Mode Switcher */}
-          <button
-            onClick={() => { setReaderMode(!readerMode); setPage(1) }}
-            className={`text-xs px-4 py-2 rounded-xl font-bold transition-all ${
-              readerMode
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/25 border border-purple-500/30'
-                : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/5'
-            }`}
-          >
-            {readerMode ? '📖 Chế độ đọc cổ điển (ON)' : '📖 Chế độ đọc cổ điển'}
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Mode Segmented Tab Switcher */}
+          <div className="flex bg-black/5 dark:bg-black/35 p-0.5 rounded-full border border-black/5 dark:border-white/5 shadow-inner">
+            <button
+              onClick={() => { setReaderMode(true); setPage(1); }}
+              className={`text-xs px-4 py-1.5 rounded-full font-bold transition-all active-scale ${
+                readerMode
+                  ? 'bg-iphone-neon text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              📖 Đọc cổ điển
+            </button>
+            <button
+              onClick={() => { setReaderMode(false); setPage(1); }}
+              className={`text-xs px-4 py-1.5 rounded-full font-bold transition-all active-scale ${
+                !readerMode
+                  ? 'bg-iphone-neon text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              📜 Đọc cuộn dọc
+            </button>
+          </div>
 
           {/* Filter options (Only in Block Mode) */}
           {!readerMode && (
-            <div className="flex bg-white/5 p-0.5 rounded-xl border border-white/5">
+            <div className="flex bg-black/5 dark:bg-black/35 p-0.5 rounded-full border border-black/5 dark:border-white/5 shadow-inner">
               {(['all', 'translated', 'untranslated'] as const).map(f => (
                 <button
                   key={f}
-                  onClick={() => { setFilter(f); setPage(1) }}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
-                    filter === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+                  onClick={() => { setFilter(f); setPage(1); }}
+                  className={`text-xs px-4 py-1.5 rounded-full font-bold transition-all active-scale ${
+                    filter === f ? 'bg-white dark:bg-[#121214] text-[#0066cc] dark:text-[#2997ff] shadow-sm' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   {f === 'all' ? 'Tất cả' : f === 'translated' ? 'Đã dịch' : 'Chưa dịch'}
@@ -616,12 +629,12 @@ export default function DocumentPreview({
       </div>
 
       {bilingual && (
-        <div className="text-xs text-blue-300 bg-blue-500/5 rounded-xl border border-blue-500/10 px-4 py-2.5 font-light flex items-center gap-2">
+        <div className="text-xs text-[#0066cc] dark:text-[#2997ff] bg-[#0066cc]/5 dark:bg-[#2997ff]/5 rounded-xl border border-[#0066cc]/10 dark:border-[#2997ff]/10 px-4 py-3 font-light flex items-center gap-2 select-none">
           <span>💡</span>
-          <span>
+          <span className="leading-relaxed">
             {readerMode 
-              ? 'Chế độ lật trang sách cổ điển: Nhấp đúp vào bất kỳ từ tiếng Anh nào để xem nghĩa và phiên âm IPA. Bôi đen để lưu cụm từ.'
-              : 'Chế độ cuộn dọc: Bạn có thể click vào câu tiếng Anh để làm sáng rõ bản dịch tiếng Việt tương ứng.'
+              ? 'Chế độ lật trang cổ điển: Nhấp đúp vào bất kỳ từ tiếng Anh nào để tra cứu nhanh nghĩa và phiên âm IPA bằng AI. Bôi đen để lưu cụm từ.'
+              : 'Chế độ cuộn dọc: Nhấp vào câu tiếng Anh để làm sáng tỏ/ẩn bản dịch tiếng Việt tương ứng phía dưới.'
             }
           </span>
         </div>
@@ -629,8 +642,8 @@ export default function DocumentPreview({
 
       {/* Reader Layout container */}
       {readerMode ? (
-        <div className="book-wrapper">
-          <div className="real-book">
+        <div className="book-wrapper border border-black/5 dark:border-white/5 bg-[#eaeaea] dark:bg-[#0f172a] shadow-apple-product rounded-[24px] p-6 transition-colors duration-300">
+          <div className="real-book shadow-2xl">
             {/* Spine Crease shadow fold */}
             <div className="book-spine" />
             
@@ -726,27 +739,25 @@ export default function DocumentPreview({
           </div>
 
           {/* Book navigation control buttons */}
-          <div className="flex justify-between items-center mt-5 max-w-[1080px] mx-auto px-2">
+          <div className="flex justify-between items-center mt-6 max-w-[1080px] mx-auto px-4 select-none">
             <button
               onClick={handlePrevPage}
               disabled={page === 1 || flipClass !== ''}
-              className="px-6 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed border border-white/5 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md"
+              className="px-6 py-2.5 bg-white dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-full border border-black/10 dark:border-white/5 text-xs font-bold transition-all active-scale shadow-sm flex items-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed"
             >
-              <span>◀</span>
-              <span>Trang trước</span>
+              <span>◀ Trang trước</span>
             </button>
 
-            <span className="text-xs text-gray-400 font-mono font-bold">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono font-bold">
               Trang {page * 2 - 1} - {page * 2} / {totalPages * 2}
             </span>
 
             <button
               onClick={handleNextPage}
               disabled={page + 1 >= totalPages || rightVisible.length === 0 || flipClass !== ''}
-              className="px-6 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed border border-white/5 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md"
+              className="px-6 py-2.5 bg-white dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-full border border-black/10 dark:border-white/5 text-xs font-bold transition-all active-scale shadow-sm flex items-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed"
             >
-              <span>Trang tiếp</span>
-              <span>▶</span>
+              <span>Trang tiếp ▶</span>
             </button>
           </div>
         </div>
@@ -772,21 +783,21 @@ export default function DocumentPreview({
 
           {/* List pagination */}
           {standardTotalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 pt-4 border-t border-white/5">
+            <div className="flex items-center justify-center gap-4 pt-6 border-t border-black/5 dark:border-white/5 select-none">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
+                className="px-5 py-2 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-black/5 border border-black/10 dark:border-white/5 text-xs font-bold rounded-full transition-all active-scale disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 ← Trước
               </button>
-              <span className="text-gray-400 text-xs font-mono font-medium">
+              <span className="text-gray-500 dark:text-gray-400 text-xs font-mono font-bold">
                 Trang {page} / {standardTotalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(standardTotalPages, p + 1))}
                 disabled={page === standardTotalPages}
-                className="px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed border border-white/5 text-xs font-semibold transition-all active:scale-95"
+                className="px-5 py-2 bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-black/5 border border-black/10 dark:border-white/5 text-xs font-bold rounded-full transition-all active-scale disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Tiếp →
               </button>

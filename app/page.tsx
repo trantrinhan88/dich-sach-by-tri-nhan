@@ -215,27 +215,14 @@ export default function Home() {
   const [librarySearch, setLibrarySearch] = useState('')
   const [libraryFilter, setLibraryFilter] = useState<'all' | 'favorites'>('all')
   const [toastMsg, setToastMsg] = useState<string | null>(null)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  // Force light theme and disable dark mode
+  const theme = 'light'
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('dich-sach-theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-    } else {
-      setTheme('light')
-    }
+    document.documentElement.classList.add('light-theme')
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('dich-sach-theme', 'light')
   }, [])
-
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light-theme')
-      document.documentElement.classList.remove('dark')
-    } else {
-      document.documentElement.classList.remove('light-theme')
-      document.documentElement.classList.add('dark')
-    }
-    localStorage.setItem('dich-sach-theme', theme)
-  }, [theme])
 
   const [translatingBookId, setTranslatingBookId] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
@@ -865,79 +852,55 @@ export default function Home() {
   const totalCount = partialTranslated.filter(b => b.type !== 'code' && b.type !== 'image').length
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-gray-950 to-zinc-950 relative overflow-hidden">
-      {/* Dynamic ambient highlights */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto px-4 py-10 relative z-10 space-y-8">
-        {/* Header */}
-        <header className="relative text-center md:text-left border-b border-white/5 pb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-blue-300 font-medium backdrop-blur-md self-center sm:self-start">
-              ⚡ Tối ưu dịch thuật song ngữ với Gemini 2.5 Flash
-            </div>
-            <button
-              onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-              className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all active:scale-95 self-center sm:self-auto text-gray-300 hover:text-white"
-              title="Chuyển đổi giao diện Sáng / Tối"
-            >
-              {theme === 'light' ? '🌙 Chế độ tối' : '☀️ Chế độ sáng'}
-            </button>
+    <main className="min-h-screen bg-[#f5f5f7] dark:bg-[#121214] text-[#1d1d1f] dark:text-[#ffffff] relative overflow-hidden apple-font-text transition-colors duration-300">
+      
+      {/* Thin Apple Global Nav (56px) */}
+      <nav 
+        className="h-[56px] border-b border-white/10 flex items-center px-6 sticky top-0 z-50 justify-between select-none shadow-sm"
+        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)' }}
+      >
+        <div className="flex items-center gap-6">
+          <span className="text-yellow-300 font-bold text-[18px] tracking-wider cursor-pointer hover:opacity-80 active-scale transition-all flex items-center gap-1.5" onClick={() => resetToUpload()}>
+            <span>📖</span>
+            <span className="font-mono">Tác giả: Trần Trí Nhân</span>
+          </span>
+          <div className="hidden md:flex items-center gap-6 text-[18px] text-white/85 font-light tracking-wide">
+            <span className={`hover:text-yellow-300 cursor-pointer transition-colors ${activeTab === 'translate' ? 'text-yellow-300 font-bold' : ''}`} onClick={() => { setActiveTab('translate'); setSelectedBookId(null); }}>⚡ Dịch sách</span>
+            <span className={`hover:text-yellow-300 cursor-pointer transition-colors ${activeTab === 'read' ? 'text-yellow-300 font-bold' : ''}`} onClick={() => { setActiveTab('read'); setSelectedBookId(null); }}>📚 Thư viện</span>
+            <span className={`hover:text-yellow-300 cursor-pointer transition-colors ${activeTab === 'vocab' ? 'text-yellow-300 font-bold' : ''}`} onClick={() => { setActiveTab('vocab'); setSelectedBookId(null); }}>📓 Sổ tay từ vựng</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 tracking-tight">
-            📖 DỊCH SÁCH SONG NGỮ
-          </h1>
-          <p className="text-gray-400 mt-2 text-base max-w-2xl font-light leading-relaxed">
-            Học ngoại ngữ qua dịch sách định dạng EPUB thành từng câu song ngữ. Tự động hóa bộ đệm <span className="text-blue-400 font-medium">Context Caching</span> giúp tiết kiệm 90% chi phí API.
-          </p>
-          <p className="text-gray-500 mt-1.5 text-xs">
-            Tác giả: Trần Trí Nhân
-          </p>
-        </header>
-
-        {/* Main Tabs Navigation */}
-        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 max-w-lg mx-auto md:mx-0 shadow-lg backdrop-blur-md">
-          <button
-            onClick={() => setActiveTab('translate')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'translate'
-                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25 border border-blue-400/20'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>⚡ Dịch sách</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('read')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'read'
-                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25 border border-blue-400/20'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>📖 Đọc sách</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('vocab')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'vocab'
-                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/25 border border-blue-400/20'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>📓 Sổ tay từ vựng</span>
-          </button>
         </div>
+        <div className="flex items-center gap-4">
+        </div>
+      </nav>
 
+      {/* Apple Sub-Nav (52px) */}
+      <div 
+        className="h-[52px] sticky top-[56px] z-40 border-b border-white/10 flex items-center justify-between px-6 shadow-md"
+        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-serif font-semibold text-[18px] text-yellow-300 tracking-tight">
+            {fileName ? `📄 ${fileName.replace(/\.(pdf|epub)$/i, '')}` : "📖 Dịch Sách Song Ngữ"}
+          </span>
+          {step !== 'upload' && activeTab === 'translate' && (
+            <span className="text-[10px] uppercase font-mono tracking-widest bg-white/20 text-yellow-300 px-2.5 py-0.5 rounded-full font-bold border border-white/20 shadow-sm">
+              {fileType.toUpperCase()}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-8 relative z-10 space-y-8">
+        
         {activeTab === 'vocab' ? (
           <VocabNotebook />
         ) : activeTab === 'read' ? (
           // Chế độ đọc sách song ngữ độc lập từ Thư viện (IndexedDB)
           selectedBookId ? (
             <div className="space-y-4">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center text-sm shadow-md">
-                <span className="text-gray-300 font-medium truncate pr-4">📄 Đang đọc: {selectedBookMetadata?.title || fileName}</span>
+              <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-4 flex justify-between items-center text-sm shadow-sm">
+                <span className="text-gray-900 dark:text-white font-semibold truncate pr-4">📄 Đang đọc: {selectedBookMetadata?.title || fileName}</span>
                 <button
                   onClick={() => {
                     setSelectedBookId(null)
@@ -945,7 +908,7 @@ export default function Home() {
                     setSelectedBookMetadata(null)
                     loadLibrary()
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline font-semibold shrink-0"
+                  className="text-xs text-[#0066cc] dark:text-[#2997ff] hover:underline font-bold shrink-0"
                 >
                   ◀ Quay lại thư viện
                 </button>
@@ -974,15 +937,15 @@ export default function Home() {
           ) : (
             <div className="space-y-6">
               {/* Library Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white tracking-wide">📚 THƯ VIỆN SÁCH CỦA BẠN</h2>
-                  <p className="text-gray-400 text-xs mt-1 font-light">
+                  <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white apple-font-display">📚 THƯ VIỆN SÁCH CỦA BẠN</h2>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 font-light">
                     Lưu trữ ngoại tuyến trên trình duyệt (IndexedDB). Tự động lưu trang đang đọc dở.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl border border-blue-400/20 shadow-md shadow-blue-500/10 cursor-pointer transition-all active:scale-95 shrink-0 select-none">
+                  <label className="flex items-center gap-2 px-5 py-2.5 bg-[#0066cc] hover:bg-[#0071e3] text-white text-xs font-bold rounded-full shadow-sm cursor-pointer transition-all active-scale shrink-0 select-none">
                     <span>📥 Thêm sách mới (EPUB/PDF)</span>
                     <input
                       type="file"
@@ -995,10 +958,10 @@ export default function Home() {
               </div>
 
               {/* Filters & Search */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/5 backdrop-blur-md rounded-2xl px-4 py-3 border border-white/10 shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] px-5 py-3 shadow-sm">
                 {/* Search Bar */}
                 <div className="relative flex-1 max-w-md">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-500 text-sm">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400 text-sm">
                     🔍
                   </span>
                   <input
@@ -1006,28 +969,28 @@ export default function Home() {
                     placeholder="Tìm sách trong thư viện..."
                     value={librarySearch}
                     onChange={(e) => setLibrarySearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-black/35 border border-white/5 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-all font-light"
+                    className="w-full pl-10 pr-4 py-2 bg-[#f5f5f7] dark:bg-black/35 border border-black/5 dark:border-white/5 rounded-full text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0066cc] font-light"
                   />
                 </div>
                 
                 {/* Filter Switcher */}
-                <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 shrink-0 self-start md:self-auto">
+                <div className="flex bg-[#f5f5f7] dark:bg-black/20 p-1 rounded-full border border-black/5 dark:border-white/5 shrink-0 self-start md:self-auto select-none">
                   <button
                     onClick={() => setLibraryFilter('all')}
-                    className={`text-xs px-4 py-1.5 rounded-lg font-medium transition-all ${
+                    className={`text-xs px-4 py-1.5 rounded-full font-bold transition-all ${
                       libraryFilter === 'all'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
                     Tất cả ({libraryBooks.length})
                   </button>
                   <button
                     onClick={() => setLibraryFilter('favorites')}
-                    className={`text-xs px-4 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                    className={`text-xs px-4 py-1.5 rounded-full font-bold transition-all flex items-center gap-1.5 ${
                       libraryFilter === 'favorites'
-                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-pink-500/10 text-pink-600 dark:text-pink-300 border border-pink-500/20'
+                        : 'text-gray-400 hover:text-pink-500'
                     }`}
                   >
                     ❤️ Yêu thích ({libraryBooks.filter(b => b.isFavorite).length})
@@ -1045,20 +1008,20 @@ export default function Home() {
 
                 if (filteredBooks.length === 0) {
                   return (
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center space-y-4 max-w-md mx-auto my-6 shadow-xl">
-                      <span className="text-4xl inline-block">📭</span>
+                    <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-12 text-center space-y-4 max-w-md mx-auto my-6 shadow-sm">
+                      <span className="text-4xl inline-block select-none">📭</span>
                       <div className="space-y-1">
-                        <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wide">Thư viện trống</h3>
-                        <p className="text-gray-500 text-xs font-light max-w-xs mx-auto leading-relaxed">
+                        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-300 uppercase tracking-wide">Thư viện trống</h3>
+                        <p className="text-gray-400 dark:text-gray-500 text-xs font-light max-w-xs mx-auto leading-relaxed">
                           {librarySearch 
                             ? 'Không tìm thấy sách nào khớp với từ khóa tìm kiếm của bạn.' 
-                            : 'Hãy chuyển sang tab Dịch sách hoặc bấm Nhập sách dịch từ file JSON để điền đầy thư viện nhé!'}
+                            : 'Hãy tải lên file EPUB/PDF để bắt đầu đọc sách hoặc bấm Nhập sách dịch từ file JSON để điền đầy thư viện nhé!'}
                         </p>
                       </div>
                       {!librarySearch && (
                         <button
                           onClick={() => setActiveTab('translate')}
-                          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg transition-all active:scale-95"
+                          className="px-6 py-2.5 bg-[#0066cc] hover:bg-[#0071e3] text-white text-xs font-bold rounded-full shadow-sm transition-all active-scale"
                         >
                           ⚡ Đi dịch sách ngay
                         </button>
@@ -1075,26 +1038,24 @@ export default function Home() {
                       return (
                         <div
                           key={book.id}
-                          className="group relative bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 flex flex-col justify-between hover:border-white/20 transition-all duration-300 shadow-xl shadow-black/20 hover:-translate-y-1 overflow-hidden"
+                          className="group relative bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-col justify-between hover:border-black/10 dark:hover:border-white/10 transition-all duration-300 shadow-sm hover:-translate-y-0.5 overflow-hidden"
                         >
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-indigo-500/0 to-purple-500/5 group-hover:to-purple-500/10 transition-all pointer-events-none" />
-                          
-                          <div className="flex items-center justify-between gap-2 mb-4 z-10">
-                            <span className="text-[9px] uppercase tracking-wider font-mono font-bold bg-white/10 text-blue-300 px-2 py-0.5 rounded-full border border-white/5">
+                          <div className="flex items-center justify-between gap-2 mb-4 z-10 select-none">
+                            <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#0066cc]/10 dark:bg-[#2997ff]/10 text-[#0066cc] dark:text-[#2997ff] px-2.5 py-0.5 rounded-full border border-[#0066cc]/10 dark:border-[#2997ff]/10">
                               {book.fileType.toUpperCase()}
                             </span>
                             
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={(e) => handleToggleFavorite(book.id, e)}
-                                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-red-400 active:scale-90 transition-all"
+                                className="p-1.5 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-400 hover:text-pink-500 active-scale transition-all"
                                 title="Yêu thích"
                               >
                                 {book.isFavorite ? '❤️' : '🤍'}
                               </button>
                               <button
                                 onClick={(e) => handleDeleteBook(book.id, book.title, e)}
-                                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-red-500 active:scale-90 transition-all text-xs"
+                                className="p-1.5 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-400 hover:text-red-500 active-scale transition-all text-xs"
                                 title="Xóa sách"
                               >
                                 🗑️
@@ -1106,48 +1067,48 @@ export default function Home() {
                             <div className="space-y-1.5">
                               <h3 
                                 onClick={() => handleOpenBook(book)}
-                                className="font-bold text-sm text-white tracking-tight group-hover:text-blue-400 transition-colors cursor-pointer line-clamp-2 leading-snug"
+                                className="font-bold text-[15px] text-gray-900 dark:text-white tracking-tight group-hover:text-[#0066cc] dark:group-hover:text-[#2997ff] transition-colors cursor-pointer line-clamp-2 leading-snug apple-font-display"
                                 title={book.title}
                               >
                                 {book.title}
                               </h3>
-                              <p className="text-[10px] text-gray-500 font-light">
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-light select-none">
                                 Lần cuối đọc: {new Date(book.lastReadAt).toLocaleDateString('vi-VN')}
                               </p>
                             </div>
 
-                            <div className="space-y-2.5 pt-2">
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] text-gray-400 font-light">
-                                  <span>Trang đang đọc: <strong className="text-gray-200 font-medium">{book.lastPage} / {book.totalPages}</strong></span>
+                            <div className="space-y-3 pt-2">
+                              <div className="space-y-1 select-none">
+                                <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 font-light">
+                                  <span>Trang đang đọc: <strong className="text-gray-800 dark:text-gray-200 font-bold">{book.lastPage} / {book.totalPages}</strong></span>
                                   <span>{readPercent}%</span>
                                 </div>
-                                <div className="h-1.5 bg-black/35 rounded-full overflow-hidden border border-white/5">
+                                <div className="h-1 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
                                   <div 
-                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-300"
+                                    className="h-full bg-[#0066cc] rounded-full transition-all duration-300"
                                     style={{ width: `${readPercent}%` }}
                                   />
                                 </div>
                               </div>
 
-                              <div className="flex items-center justify-between text-[10px] text-gray-400 font-light bg-black/25 px-3 py-1.5 rounded-xl border border-white/5">
+                              <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 font-light bg-[#f5f5f7] dark:bg-black/25 px-3 py-1.5 rounded-xl border border-black/5 dark:border-white/5">
                                 <span>Tiến trình dịch:</span>
-                                <span className="text-indigo-300 font-medium font-mono">{book.translatedCount} câu song ngữ</span>
+                                <span className="text-[#0066cc] dark:text-indigo-300 font-bold font-mono">{book.translatedCount} câu song ngữ</span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-5 pt-3 border-t border-white/5 z-10 flex gap-2">
+                          <div className="mt-5 pt-3 border-t border-black/5 dark:border-white/5 z-10 flex gap-2 select-none">
                             <button
                               onClick={() => handleOpenBook(book)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 text-white text-[11px] font-bold rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all duration-300 active:scale-95"
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-900 dark:text-white text-[11px] font-bold rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 border border-black/5 dark:border-white/5 transition-all active-scale"
                             >
                               <span>📖</span>
                               <span>{book.lastPage > 1 ? 'Đọc tiếp' : 'Đọc gốc'}</span>
                             </button>
                             <button
                               onClick={() => handleTranslateBookFromLibrary(book)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-[11px] font-bold rounded-xl border border-blue-400/20 shadow-md shadow-blue-500/10 transition-all duration-300 active:scale-95"
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[#0066cc] hover:bg-[#0071e3] text-white text-[11px] font-bold rounded-full border border-blue-400/20 shadow-sm transition-all active-scale"
                             >
                               <span>⚡</span>
                               <span>Dịch song ngữ</span>
@@ -1166,434 +1127,431 @@ export default function Home() {
             {/* API Config */}
             <ApiConfig onConfigChange={setApiConfig} />
 
-        {/* Error banner */}
-        {error && (
-          <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-5 py-3 text-red-300 text-sm flex items-start gap-3 backdrop-blur-md">
-            <span>⚠️</span>
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-auto text-red-400 hover:text-red-200 font-bold">✕</button>
-          </div>
-        )}
-
-        {/* Warning banner */}
-        {warningMessage && (
-          <div className="bg-yellow-500/15 border border-yellow-500/40 rounded-xl px-5 py-3 text-yellow-300 text-sm flex items-start gap-3 backdrop-blur-md">
-            <span>💡</span>
-            <span>{warningMessage}</span>
-            <button onClick={() => setWarningMessage(null)} className="ml-auto text-yellow-400 hover:text-yellow-200 font-bold font-mono">✕</button>
-          </div>
-        )}
-
-        {/* Caching Shimmer Loader */}
-        {isCaching && (
-          <div className="bg-white/5 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-8 text-center space-y-4 shadow-2xl shadow-blue-500/10">
-            <div className="relative inline-flex">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/20 text-3xl animate-spin">
-                🌀
-              </span>
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-[9px] font-bold text-white shadow-md">
-                AI
-              </span>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-purple-300 tracking-wide">
-                🔮 ĐANG TỐI ƯU CHI PHÍ VỚI CONTEXT CACHING...
-              </h3>
-              <p className="text-gray-400 text-sm max-w-lg mx-auto leading-relaxed">
-                Đang đẩy nội dung sách gốc lên bộ đệm đám mây của Google AI Studio. 
-                Quá trình này chỉ diễn ra một lần và giúp giảm 90% chi phí API, đồng thời giúp AI ghi nhớ toàn bộ văn cảnh.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Upload */}
-        {step === 'upload' && !isCaching && (
-          <section className="space-y-3">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">
-              Bước 1: Tải lên tài liệu (.epub)
-            </h2>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-1 shadow-xl">
-              <FileUpload onFileParsed={handleFileParsed} />
-            </div>
-          </section>
-        )}
-
-        {/* Step: Ready to translate */}
-        {step === 'ready' && (
-          <section className="space-y-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5 flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">📄 {fileName}</p>
-                <p className="text-gray-400 text-sm mt-0.5">{blocks.length} đoạn văn · {fileType.toUpperCase()}</p>
+            {/* Error banner */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/25 rounded-[18px] px-5 py-3 text-red-600 dark:text-red-300 text-xs flex items-center gap-3 backdrop-blur-md">
+                <span className="text-sm">⚠️</span>
+                <span className="font-medium flex-1">{error}</span>
+                <button onClick={() => setError('')} className="ml-auto text-red-500 hover:text-red-700 font-bold font-mono">✕</button>
               </div>
-              <button onClick={resetToUpload} className="text-gray-400 hover:text-white text-sm px-3 py-1.5 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
-                Đổi file
-              </button>
-            </div>
+            )}
 
-            {/* Chapter Selector Section */}
-            {blocks.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
-                <div className="border-b border-white/5 pb-3">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-sm font-bold text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
-                    {blocks.length > 0 && (() => {
-                      const chs = getChapters(blocks, splitMode)
-                      const allSelected = chs.length > 0 && chs.every(ch => selectedChapters.includes(ch.href))
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (allSelected) {
-                              setSelectedChapters([])
-                            } else {
-                              setSelectedChapters(chs.map(ch => ch.href))
-                            }
-                          }}
-                          className="text-[11px] px-2.5 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 rounded-lg border border-blue-500/20 transition-all font-semibold active:scale-95 shrink-0"
-                        >
-                          {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả các chương'}
-                        </button>
-                      )
-                    })()}
-                  </div>
-                  <p className="text-gray-400 text-xs mt-1.5 font-light">
-                    Chọn các chương bạn muốn dịch. Bạn có thể xóa bản dịch lỗi của một chương cụ thể để dịch lại.
+            {/* Warning banner */}
+            {warningMessage && (
+              <div className="bg-yellow-500/10 border border-yellow-500/25 rounded-[18px] px-5 py-3 text-yellow-600 dark:text-yellow-300 text-xs flex items-center gap-3 backdrop-blur-md">
+                <span className="text-sm">💡</span>
+                <span className="font-medium flex-1">{warningMessage}</span>
+                <button onClick={() => setWarningMessage(null)} className="ml-auto text-yellow-500 hover:text-yellow-700 font-bold font-mono">✕</button>
+              </div>
+            )}
+
+            {/* Caching Shimmer Loader */}
+            {isCaching && (
+              <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/10 rounded-[22px] p-10 text-center space-y-5 shadow-2xl">
+                <span className="flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-[#0066cc]/10 text-3xl animate-spin">
+                  🌀
+                </span>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white apple-font-display">
+                    🔮 ĐANG TỐI ƯU CHI PHÍ VỚI CONTEXT CACHING...
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed font-light max-w-md mx-auto">
+                    Đang đẩy nội dung sách gốc lên bộ đệm đám mây của Google AI Studio. 
+                    Quá trình này chỉ diễn ra một lần và giúp giảm 90% chi phí API, đồng thời giúp AI ghi nhớ toàn bộ văn cảnh.
                   </p>
                 </div>
+              </div>
+            )}
 
-                {/* Active Chapter Splitting Selector */}
-                {fileType === 'epub' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/5 p-4 rounded-xl border border-white/5 shadow-inner">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-                        ⚙️ Chế độ phân chia chương
-                      </label>
-                      <p className="text-[11px] text-gray-400 font-light">
-                        Lựa chọn cách thức gom nhóm nội dung thành từng chương phù hợp nhất với cấu trúc của sách.
-                      </p>
+            {/* Step: Upload */}
+            {step === 'upload' && !isCaching && (
+              <section className="space-y-3">
+                <h2 className="text-[10px] font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 select-none">
+                  Bước 1: Tải lên tài liệu (.epub)
+                </h2>
+                <div className="rounded-[22px] overflow-hidden shadow-sm">
+                  <FileUpload onFileParsed={handleFileParsed} />
+                </div>
+              </section>
+            )}
+
+            {/* Step: Ready to translate */}
+            {step === 'ready' && (
+              <section className="space-y-5">
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-900 dark:text-white font-bold text-sm truncate">📄 {fileName}</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 font-medium">{blocks.length} đoạn văn · {fileType.toUpperCase()}</p>
+                  </div>
+                  <button onClick={resetToUpload} className="px-5 py-2 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-full font-bold active-scale text-xs transition-all">
+                    Đổi file
+                  </button>
+                </div>
+
+                {/* Chapter Selector Section */}
+                {blocks.length > 0 && (
+                  <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 space-y-5 shadow-sm">
+                    <div className="border-b border-black/5 dark:border-white/5 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-extrabold text-gray-900 dark:text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
+                        <p className="text-gray-400 dark:text-gray-500 text-xs font-light">Chọn các chương bạn muốn dịch hoặc xóa bản dịch cũ để dịch lại.</p>
+                      </div>
+                      {blocks.length > 0 && (() => {
+                        const chs = getChapters(blocks, splitMode)
+                        const allSelected = chs.length > 0 && chs.every(ch => selectedChapters.includes(ch.href))
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (allSelected) {
+                                setSelectedChapters([])
+                              } else {
+                                setSelectedChapters(chs.map(ch => ch.href))
+                              }
+                            }}
+                            className="text-xs px-4 py-2 bg-[#0066cc]/10 hover:bg-[#0066cc]/15 text-[#0066cc] rounded-full border border-[#0066cc]/15 font-bold active-scale transition-all select-none self-start sm:self-auto"
+                          >
+                            {allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả các chương'}
+                          </button>
+                        )
+                      })()}
                     </div>
-                    <select
-                      value={splitMode}
-                      onChange={(e) => {
-                        const newMode = e.target.value as SplitMode
-                        setSplitMode(newMode)
-                        // Reset selected chapters to match new layout
-                        setSelectedChapters([])
-                      }}
-                      className="bg-black/45 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-all font-medium cursor-pointer"
-                    >
-                      <option value="combined">Kết hợp cả File & Tiêu đề (Mặc định)</option>
-                      <option value="file">Chỉ theo cấu trúc File gốc (XHTML)</option>
-                      <option value="heading12">Theo tiêu đề lớn (H1, H2)</option>
-                      <option value="heading123">Theo tất cả tiêu đề (H1, H2, H3)</option>
-                    </select>
+
+                    {/* Active Chapter Splitting Selector */}
+                    {fileType === 'epub' && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f5f5f7] dark:bg-black/25 p-4 rounded-[18px] border border-black/5 dark:border-white/5 shadow-inner">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-800 dark:text-gray-300 flex items-center gap-1.5 select-none">
+                            ⚙️ Chế độ phân chia chương
+                          </label>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500 font-light">
+                            Lựa chọn cách thức gom nhóm nội dung thành từng chương phù hợp nhất với cấu trúc của sách.
+                          </p>
+                        </div>
+                        <select
+                          value={splitMode}
+                          onChange={(e) => {
+                            const newMode = e.target.value as SplitMode
+                            setSplitMode(newMode)
+                            setSelectedChapters([])
+                          }}
+                          className="bg-white dark:bg-[#1c1c1e] border border-black/10 dark:border-white/10 rounded-full px-4 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0066cc] font-bold cursor-pointer shadow-sm select-none"
+                        >
+                          <option value="combined">Kết hợp cả File & Tiêu đề (Mặc định)</option>
+                          <option value="file">Chỉ theo cấu trúc File gốc (XHTML)</option>
+                          <option value="heading12">Theo tiêu đề lớn (H1, H2)</option>
+                          <option value="heading123">Theo tất cả tiêu đề (H1, H2, H3)</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="max-h-[300px] overflow-y-auto divide-y divide-black/5 dark:divide-white/5 border border-black/5 dark:border-white/5 rounded-[18px] bg-[#f5f5f7]/50 dark:bg-black/25">
+                      {getChapters(blocks, splitMode).map((ch) => {
+                        const isSelected = selectedChapters.includes(ch.href)
+                        const percent = ch.blocksCount > 0 ? Math.round((ch.translatedCount / ch.blocksCount) * 100) : 0
+                        
+                        return (
+                          <div key={ch.href} className="flex items-center justify-between p-3.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedChapters(prev => [...prev, ch.href])
+                                  } else {
+                                    setSelectedChapters(prev => prev.filter(h => h !== ch.href))
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-black/15 dark:border-white/10 bg-white dark:bg-black/50 text-[#0066cc] focus:ring-[#0066cc] cursor-pointer"
+                              />
+                              <div className="min-w-0 select-none">
+                                <p className="text-gray-900 dark:text-white font-semibold text-xs truncate" title={ch.title}>
+                                  {ch.title}
+                                </p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
+                                  {ch.translatedCount}/{ch.blocksCount} câu song ngữ ({percent}%)
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 shrink-0 select-none">
+                              {ch.isCompleted ? (
+                                <span className="text-[8px] uppercase font-mono bg-green-500/10 text-green-600 dark:text-green-300 px-2.5 py-0.5 rounded-full border border-green-500/15 font-bold">
+                                  Hoàn thành
+                                </span>
+                              ) : ch.translatedCount > 0 ? (
+                                <span className="text-[8px] uppercase font-mono bg-yellow-500/10 text-yellow-600 dark:text-yellow-300 px-2.5 py-0.5 rounded-full border border-yellow-500/15 font-bold">
+                                  Dịch dở
+                                </span>
+                              ) : (
+                                <span className="text-[8px] uppercase font-mono bg-black/5 dark:bg-white/5 text-gray-400 dark:text-gray-500 px-2.5 py-0.5 rounded-full border border-black/5 dark:border-white/5">
+                                  Chưa dịch
+                                </span>
+                              )}
+
+                              {ch.translatedCount > 0 && (
+                                <button
+                                  onClick={() => handleResetChapterTranslation(ch.href)}
+                                  className="text-[9px] text-red-600 dark:text-red-300 bg-red-500/10 hover:bg-red-500/15 px-2.5 py-1 rounded-full border border-red-500/15 transition-all font-bold active-scale"
+                                  title="Xóa toàn bộ câu dịch của chương này để dịch lại"
+                                >
+                                  🔄 Reset
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
 
-                <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5 border border-white/5 rounded-xl bg-black/25">
-                  {getChapters(blocks, splitMode).map((ch) => {
-                    const isSelected = selectedChapters.includes(ch.href)
-                    const percent = ch.blocksCount > 0 ? Math.round((ch.translatedCount / ch.blocksCount) * 100) : 0
-                    
-                    return (
-                      <div key={ch.href} className="flex items-center justify-between p-3.5 hover:bg-white/5 transition-colors gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedChapters(prev => [...prev, ch.href])
-                              } else {
-                                setSelectedChapters(prev => prev.filter(h => h !== ch.href))
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-white/10 bg-black/50 text-blue-600 focus:ring-blue-500 focus:ring-offset-black cursor-pointer"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-white font-medium text-xs truncate" title={ch.title}>
-                              {ch.title}
-                            </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                              {ch.translatedCount}/{ch.blocksCount} câu song ngữ ({percent}%)
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          {ch.isCompleted ? (
-                            <span className="text-[9px] font-mono bg-green-500/10 text-green-300 px-2 py-0.5 rounded-full border border-green-500/20 font-bold">
-                              Hoàn thành
-                            </span>
-                          ) : ch.translatedCount > 0 ? (
-                            <span className="text-[9px] font-mono bg-yellow-500/10 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/20 font-bold">
-                              Dịch dở
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-mono bg-white/5 text-gray-400 px-2 py-0.5 rounded-full border border-white/5">
-                              Chưa dịch
-                            </span>
-                          )}
-
-                          {ch.translatedCount > 0 && (
-                            <button
-                              onClick={() => handleResetChapterTranslation(ch.href)}
-                              className="text-[10px] text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition-all font-semibold active:scale-95"
-                              title="Xóa toàn bộ câu dịch của chương này để dịch lại"
-                            >
-                              🔄 Reset
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-3 items-center">
-              <button
-                onClick={handleTranslate}
-                disabled={!apiConfig || selectedChapters.length === 0}
-                className="px-7 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-600/20"
-              >
-                ▶ Bắt đầu dịch
-              </button>
-
-              <button
-                onClick={() => setBilingual(b => !b)}
-                className={`px-4 py-3 rounded-xl font-medium text-sm transition-colors ${
-                  bilingual
-                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                {bilingual ? '🔤 Song ngữ Bật' : '🔤 Song ngữ'}
-              </button>
-
-              {bilingual && (
-                <span className="text-purple-300 text-sm">
-                  Mỗi đoạn 1 câu · xuất kèm bản gốc tiếng Anh
-                </span>
-              )}
-
-              {!apiConfig && (
-                <span className="text-yellow-400 text-sm">← Cần cài đặt API key trước</span>
-              )}
-
-              {apiConfig && selectedChapters.length === 0 && (
-                <span className="text-yellow-400 text-sm">⚠️ Hãy chọn ít nhất một chương để dịch</span>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Step: Translating */}
-        {step === 'translating' && (
-          <section className="space-y-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5 flex items-center gap-4">
-              <div className="flex-1">
-                <p className="text-white font-medium truncate">📄 {fileName}</p>
-                <p className="text-gray-400 text-sm">
-                  {blocks.length} đoạn văn{bilingual ? ' · chế độ song ngữ' : ''}
-                </p>
-              </div>
-            </div>
-            <TranslationProgress
-              completed={progress.completed}
-              total={progress.total}
-              onPause={handlePause}
-              usingCache={!!(cacheNameRef.current && apiConfig?.geminiPaidApiKey)}
-            />
-          </section>
-        )}
-
-        {/* Step: Paused */}
-        {step === 'paused' && (
-          <section className="space-y-4">
-            {/* Status card */}
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-5">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-yellow-300 font-semibold">⏸ Đã tạm dừng · {fileName}</p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    Đã dịch {translatedCount} / {totalCount} đoạn
-                    {totalCount > 0 && (
-                      <span className="ml-2 text-yellow-500/70">
-                        ({Math.round((translatedCount / totalCount) * 100)}%)
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3 items-center select-none">
                   <button
-                    onClick={handleResume}
-                    disabled={!apiConfig}
-                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 disabled:opacity-40 transition-colors shadow-lg shadow-blue-600/20"
+                    onClick={handleTranslate}
+                    disabled={!apiConfig || selectedChapters.length === 0}
+                    className="px-7 py-3 bg-[#0066cc] text-white rounded-full font-bold hover:bg-[#0071e3] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm active-scale text-xs"
                   >
-                    ▶ Dịch tiếp
+                    ▶ Bắt đầu dịch
                   </button>
-                  <button
-                    onClick={resetToUpload}
-                    className="px-4 py-2.5 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 text-sm transition-colors"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </div>
 
-              {/* Mini progress bar */}
-              <div className="mt-3 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full transition-all"
-                  style={{ width: `${totalCount > 0 ? Math.round((translatedCount / totalCount) * 100) : 0}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Export partial results */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-              <p className="text-gray-300 text-sm font-medium mb-3">
-                📦 Xuất file {translatedCount > 0 ? `(${translatedCount} đoạn đã dịch)` : ''}
-              </p>
-              {translatedCount === 0 ? (
-                <p className="text-yellow-400/80 text-sm">
-                  Chưa có đoạn nào hoàn thành. Bấm <span className="font-semibold">▶ Dịch tiếp</span> để dịch thêm rồi tạm dừng lại để xuất.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2 items-center">
-                  {(['epub', 'html', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
-                    <button
-                      key={fmt}
-                      onClick={() => setExportFormat(fmt)}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        exportFormat === fmt
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                    >
-                      {fmt.toUpperCase()}
-                    </button>
-                  ))}
                   <button
-                    onClick={() => handleExport()}
-                    disabled={exporting}
-                    className="px-5 py-2 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-500 disabled:opacity-50 transition-colors shadow-lg shadow-green-600/20"
+                    onClick={() => setBilingual(b => !b)}
+                    className={`px-6 py-3 rounded-full font-bold text-xs transition-colors active-scale border ${
+                      bilingual
+                        ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20'
+                        : 'bg-black/5 text-gray-900 hover:bg-black/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 border-black/5 dark:border-white/5'
+                    }`}
                   >
-                    {exporting ? '⏳ Đang tạo...' : '⬇ Tải về'}
+                    {bilingual ? '🔤 Song ngữ Bật' : '🔤 Song ngữ Tắt'}
                   </button>
-                  {exportFormat === 'pdf' && (
-                    <p className="text-yellow-300/70 text-xs mt-2 w-full">
-                      💡 Các đoạn chưa dịch sẽ hiển thị bản gốc tiếng Anh.
-                    </p>
+
+                  {bilingual && (
+                    <span className="text-purple-600 dark:text-purple-300 text-[11px] font-bold">
+                      Mỗi đoạn 1 câu · xuất kèm bản gốc tiếng Anh
+                    </span>
+                  )}
+
+                  {!apiConfig && (
+                    <span className="text-yellow-600 dark:text-yellow-400 text-[11px] font-bold">← Cần cài đặt API key trước</span>
+                  )}
+
+                  {apiConfig && selectedChapters.length === 0 && (
+                    <span className="text-yellow-600 dark:text-yellow-400 text-[11px] font-bold">⚠️ Hãy chọn ít nhất một chương để dịch</span>
                   )}
                 </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Step: Done — preview + export */}
-        {step === 'done' && partialTranslated.length > 0 && (
-          <section className="space-y-5">
-            {/* Export bar */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">
-                  ✅ Dịch xong: {fileName}
-                  {bilingual && <span className="ml-2 text-xs text-purple-400 bg-purple-400/10 px-2 py-0.5 rounded-full">Song ngữ</span>}
-                </p>
-              </div>
-
-              <span className="text-gray-400 text-sm">Xuất ra:</span>
-              {(['html', 'epub', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
-                <button
-                  key={fmt}
-                  onClick={() => setExportFormat(fmt)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    exportFormat === fmt
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {fmt.toUpperCase()}
-                </button>
-              ))}
-
-              <button
-                onClick={() => handleExport()}
-                disabled={exporting}
-                className="px-5 py-2 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-500 disabled:opacity-50 transition-colors shadow-lg shadow-green-600/20"
-              >
-                {exporting ? '⏳ Đang tạo...' : '⬇ Tải về'}
-              </button>
-
-              <button
-                onClick={resetToUpload}
-                className="px-4 py-2 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 text-sm transition-colors"
-              >
-                File mới
-              </button>
-            </div>
-
-            {exportFormat === 'pdf' && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-yellow-300 text-sm">
-                💡 Lần đầu xuất PDF sẽ tự tải font tiếng Việt (~1.5MB). Hoặc dùng HTML rồi in bằng trình duyệt để có chất lượng cao hơn.
-              </div>
+              </section>
             )}
 
-            {/* Completed Dashboard and CTA to Reader Mode */}
-            <div className="bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/30 rounded-3xl p-8 text-center space-y-5 shadow-xl my-4">
-              <span className="text-5xl inline-block animate-pulse">🎉</span>
-              <div className="space-y-1.5">
-                <h3 className="text-xl font-bold text-white tracking-wide">DỊCH SÁCH THÀNH CÔNG!</h3>
-                <p className="text-gray-400 text-sm max-w-md mx-auto font-light leading-relaxed">
-                  Bản dịch song ngữ của bạn đã hoàn tất và sẵn sàng. Bạn có thể tải file thành phẩm về ở thanh công cụ phía trên hoặc mở chế độ đọc tập trung để học ngay lập tức.
-                </p>
-              </div>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={() => setActiveTab('read')}
-                  className="px-8 py-3.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 hover:from-blue-400 hover:to-purple-400 transition-all duration-300 transform hover:scale-[1.02] text-sm"
-                >
-                  📖 Bắt đầu đọc sách ngay (Reader Mode)
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
+            {/* Step: Translating */}
+            {step === 'translating' && (
+              <section className="space-y-4">
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex items-center justify-between gap-4 shadow-sm select-none">
+                  <div className="flex-1">
+                    <p className="text-gray-900 dark:text-white font-bold text-sm truncate">📄 {fileName}</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 font-medium font-mono">
+                      {blocks.length} đoạn văn{bilingual ? ' · chế độ song ngữ' : ''}
+                    </p>
+                  </div>
+                </div>
+                <TranslationProgress
+                  completed={progress.completed}
+                  total={progress.total}
+                  onPause={handlePause}
+                  usingCache={!!(cacheNameRef.current && apiConfig?.geminiPaidApiKey)}
+                />
+              </section>
+            )}
+
+            {/* Step: Paused */}
+            {step === 'paused' && (
+              <section className="space-y-5">
+                {/* Status card */}
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 select-none">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#ff9500] font-bold text-sm">⏸ Đã tạm dừng · {fileName}</p>
+                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 font-medium">
+                        Đã dịch {translatedCount} / {totalCount} đoạn
+                        {totalCount > 0 && (
+                          <span className="ml-2 text-[#ff9500]/90 font-mono font-bold">
+                            ({Math.round((translatedCount / totalCount) * 100)}%)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <button
+                        onClick={handleResume}
+                        disabled={!apiConfig}
+                        className="px-6 py-2.5 bg-[#0066cc] text-white rounded-full font-bold hover:bg-[#0071e3] disabled:opacity-40 transition-colors shadow-sm active-scale text-xs"
+                      >
+                        ▶ Dịch tiếp
+                      </button>
+                      <button
+                        onClick={resetToUpload}
+                        className="px-5 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-full font-bold active-scale text-xs transition-colors"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mini progress bar */}
+                  <div className="mt-4 h-1 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden select-none">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#ff9500] to-[#ffcc00] rounded-full transition-all"
+                      style={{ width: `${totalCount > 0 ? Math.round((translatedCount / totalCount) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Export partial results */}
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 shadow-sm">
+                  <p className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wider mb-4 select-none">
+                    📦 Xuất file {translatedCount > 0 ? `(${translatedCount} đoạn đã dịch)` : ''}
+                  </p>
+                  {translatedCount === 0 ? (
+                    <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium select-none">
+                      Chưa có đoạn nào hoàn thành. Bấm <span className="font-extrabold text-[#0066cc]">▶ Dịch tiếp</span> để dịch thêm rồi tạm dừng lại để xuất.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-3 items-center select-none">
+                      {(['epub', 'html', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
+                        <button
+                          key={fmt}
+                          onClick={() => setExportFormat(fmt)}
+                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                            exportFormat === fmt
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20'
+                              : 'bg-black/5 text-gray-900 hover:bg-black/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 border-black/5 dark:border-white/5'
+                          }`}
+                        >
+                          {fmt.toUpperCase()}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => handleExport()}
+                        disabled={exporting}
+                        className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-full font-bold disabled:opacity-50 transition-colors shadow-sm active-scale text-xs"
+                      >
+                        {exporting ? '⏳ Đang tạo...' : '⬇ Tải về'}
+                      </button>
+                      {exportFormat === 'pdf' && (
+                        <p className="text-yellow-600 dark:text-yellow-400 text-[11px] font-bold mt-1 w-full">
+                          💡 Các đoạn chưa dịch sẽ hiển thị bản gốc tiếng Anh.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Step: Done — preview + export */}
+            {step === 'done' && partialTranslated.length > 0 && (
+              <section className="space-y-6">
+                {/* Export bar */}
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm select-none">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-900 dark:text-white font-bold text-sm truncate">
+                      ✅ Dịch xong: {fileName}
+                      {bilingual && <span className="ml-2.5 text-[8px] uppercase tracking-wider font-extrabold bg-purple-500/10 text-purple-600 dark:text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/15">Song ngữ</span>}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-gray-400 dark:text-gray-500 text-xs font-bold">Xuất ra:</span>
+                    {(['html', 'epub', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
+                      <button
+                        key={fmt}
+                        onClick={() => setExportFormat(fmt)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                          exportFormat === fmt
+                            ? 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20'
+                            : 'bg-black/5 text-gray-900 hover:bg-black/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 border-black/5 dark:border-white/5'
+                        }`}
+                      >
+                        {fmt.toUpperCase()}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => handleExport()}
+                      disabled={exporting}
+                      className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-full font-bold disabled:opacity-50 transition-colors shadow-sm active-scale text-xs"
+                    >
+                      {exporting ? '⏳ Đang tạo...' : '⬇ Tải về'}
+                    </button>
+
+                    <button
+                      onClick={resetToUpload}
+                      className="px-5 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-full font-bold active-scale text-xs transition-colors"
+                    >
+                      File mới
+                    </button>
+                  </div>
+                </div>
+
+                {exportFormat === 'pdf' && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/25 rounded-[18px] px-5 py-3 text-yellow-600 dark:text-yellow-300 text-xs font-bold select-none">
+                    💡 Lần đầu xuất PDF sẽ tự động tải bộ font Unicode tiếng Việt (~1.5MB). Bạn có thể tải file HTML rồi in bằng trình duyệt (Print to PDF) để có chất lượng sắc nét nhất.
+                  </div>
+                )}
+
+                {/* Museum Gallery Style Celebration Banner */}
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/10 rounded-[22px] p-10 text-center space-y-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-iphone-ambient-glow pointer-events-none" />
+                  <span className="text-6xl inline-block animate-bounce relative z-10 select-none">🎉</span>
+                  <div className="space-y-2 relative z-10">
+                    <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white apple-font-display">DỊCH SÁCH THÀNH CÔNG!</h3>
+                    <p className="text-[15px] text-gray-500 dark:text-gray-400 max-w-lg mx-auto font-light leading-relaxed">
+                      Bản dịch song ngữ của bạn đã hoàn tất và được lưu trữ tự động vào Thư viện IndexedDB. Bạn có thể tải file thành phẩm về ở thanh công cụ phía trên hoặc mở chế độ đọc song ngữ để học ngoại ngữ ngay lập tức.
+                    </p>
+                  </div>
+                  <div className="flex justify-center relative z-10 pt-2 select-none">
+                    <button
+                      onClick={() => setActiveTab('read')}
+                      className="px-8 py-3.5 bg-iphone-neon hover:bg-iphone-neon-hover text-white font-bold rounded-full shadow-lg transition-all duration-300 active-scale text-xs"
+                    >
+                      📖 Bắt đầu đọc sách ngay (Reader Mode)
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
           </>
         )}
-      {/* Floating Success Toast */}
+      </div>
+
+      {/* Floating Success Toast (Apple style notifications) */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-gray-900 border border-green-500/30 text-green-300 text-sm font-semibold rounded-2xl shadow-2xl shadow-black/50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-6 duration-200">
-          <span>✅</span>
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 bg-[#fafafc] dark:bg-[#272729] border border-black/5 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-6 duration-200 select-none">
+          <span className="text-sm">✅</span>
           <span>{toastMsg}</span>
         </div>
       )}
 
       {/* Importing Loader Overlay */}
       {isImporting && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-blue-500/30 rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl shadow-blue-500/10">
-            <span className="flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-blue-500/20 text-3xl animate-spin">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 select-none">
+          <div className="bg-[#fafafc] dark:bg-[#1c1c1e] border border-black/5 dark:border-white/10 rounded-[18px] p-8 max-w-sm w-full text-center space-y-4 shadow-2xl">
+            <span className="flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-[#0066cc]/10 text-3xl animate-spin">
               🌀
             </span>
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white tracking-wide">
+              <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-wide">
                 ĐANG PHÂN TÍCH SÁCH...
               </h3>
-              <p className="text-gray-400 text-xs leading-relaxed font-light">
-                {importInfo || 'Đang trích xuất nội dung từ file EPUB/PDF. Quá trình này diễn ra hoàn toàn cục bộ trên trình duyệt.'}
+              <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed font-light">
+                {importInfo || 'Đang thực hiện trích xuất nội dung từ file EPUB/PDF. Quá trình xử lý chạy hoàn toàn cục bộ trên thiết bị của bạn.'}
               </p>
             </div>
           </div>
         </div>
       )}
-      </div>
     </main>
-  )
+  );
 }
+

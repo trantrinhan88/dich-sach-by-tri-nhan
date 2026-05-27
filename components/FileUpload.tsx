@@ -74,10 +74,21 @@ export default function FileUpload({ onFileParsed }: Props) {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
       onClick={() => !loading && inputRef.current?.click()}
-      className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 cursor-pointer transition-all
-        ${dragging ? 'border-blue-400 bg-blue-400/10' : 'border-gray-600 bg-gray-900 hover:border-gray-500 hover:bg-gray-800/50'}
+      className={`relative flex flex-col items-center justify-center rounded-[18px] border-2 border-dashed p-14 cursor-pointer transition-all duration-300 select-none active-scale overflow-hidden group
+        ${dragging ? 'border-transparent bg-white/20 dark:bg-black/40 scale-[1.01]' : 'border-white/20 hover:border-white/35'}
         ${loading ? 'cursor-wait pointer-events-none' : ''}`}
+      style={{
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)',
+        color: '#ffffff',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: '18px'
+      }}
     >
+      {/* Siri/Apple Intelligence glowing border overlay when dragging files */}
+      {dragging && (
+        <div className="absolute inset-0 bg-iphone-neon p-[2px] -z-10 rounded-[18px] animate-pulse opacity-90" />
+      )}
+      
       <input
         ref={inputRef}
         type="file"
@@ -86,29 +97,43 @@ export default function FileUpload({ onFileParsed }: Props) {
         onChange={onChange}
       />
 
-      <div className="text-5xl mb-4">{loading ? '⏳' : '📄'}</div>
+      <div className={`mb-5 transition-transform duration-500 ${loading ? 'animate-spin scale-90' : 'group-hover:scale-105'}`}>
+        {loading ? (
+          <div className="text-5xl select-none">🌀</div>
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner group-hover:scale-110 transition-transform duration-300">
+            <svg className="w-8 h-8 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+            </svg>
+          </div>
+        )}
+      </div>
 
       {loading ? (
-        <div className="text-center">
-          <p className="text-white font-medium">Đang xử lý...</p>
-          <p className="text-gray-400 text-sm mt-1">{info}</p>
+        <div className="text-center space-y-2">
+          <p className="!text-yellow-300 font-bold text-[18px]">Đang tải lên tài liệu...</p>
+          <p className="!text-yellow-200 text-sm font-light tracking-wide">{info}</p>
         </div>
       ) : (
-        <div className="text-center">
-          <p className="text-white font-medium text-lg">Kéo thả file vào đây</p>
-          <p className="text-gray-400 mt-1">hoặc nhấn để chọn file</p>
-          <p className="text-gray-500 text-sm mt-3">Hỗ trợ: .epub · .pdf &nbsp;|&nbsp; Tối đa {MAX_MB}MB</p>
+        <div className="text-center space-y-1">
+          <p className="!text-yellow-300 font-bold text-[18px]">Kéo &amp; thả sách ngoại văn vào đây</p>
+          <p className="!text-yellow-200 text-[18px] font-medium">hoặc nhấn trực tiếp để duyệt file từ máy tính</p>
+          <div className="pt-3">
+            <span className="inline-block text-xs !text-yellow-300 font-bold uppercase tracking-wide bg-white/10 px-5 py-1.5 rounded-full border border-white/20 shadow-md backdrop-blur-sm">
+              ĐỊNH DẠNG HỖ TRỢ: .EPUB hoặc .PDF &nbsp;|&nbsp; TỐI ĐA {MAX_MB}MB
+            </span>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="mt-4 px-4 py-2 bg-red-500/20 border border-red-500/40 rounded-lg text-red-300 text-sm">
-          {error}
+        <div className="mt-5 px-5 py-2.5 bg-red-500/20 border border-red-500/30 rounded-full !text-yellow-200 text-xs font-bold shadow-md backdrop-blur-sm">
+          ⚠️ {error}
         </div>
       )}
       {info && !loading && (
-        <div className="mt-4 px-4 py-2 bg-green-500/20 border border-green-500/40 rounded-lg text-green-300 text-sm">
-          {info}
+        <div className="mt-5 px-5 py-2.5 bg-green-500/20 border border-green-500/30 rounded-full !text-yellow-200 text-xs font-bold shadow-md backdrop-blur-sm">
+          ✅ {info}
         </div>
       )}
     </div>
