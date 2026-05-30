@@ -8,8 +8,8 @@ export function exportSRT(blocks: DocumentBlock[], bilingual?: boolean): string 
     const timecode = (block.metadata?.srtTimecode as string) || '00:00:00,000 --> 00:00:00,000'
     const index = count
     
-    const original = block.originalText || ''
-    let translated = block.translatedText || ''
+    const original = (block.originalText || '').replace(/<font[^>]*>|<\/font>/gi, '').trim()
+    let translated = (block.translatedText || '').replace(/<font[^>]*>|<\/font>/gi, '').trim()
     if (translated.startsWith('[CHƯA DỊCH]')) {
       translated = original
     }
@@ -17,7 +17,7 @@ export function exportSRT(blocks: DocumentBlock[], bilingual?: boolean): string 
     let text = ''
     if (bilingual) {
       if (translated && translated !== original) {
-        text = `<font color="#ffffff">${original}</font>\n<font color="#ffff00">${translated}</font>`
+        text = `${original}\n${translated}`
       } else {
         text = original
       }

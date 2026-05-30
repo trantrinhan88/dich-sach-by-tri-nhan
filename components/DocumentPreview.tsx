@@ -33,7 +33,7 @@ interface SelectionInfo {
 
 // Sub-component for individual blocks (Bilingual / Standard)
 function BlockRow({
-  block,
+  block: initialBlock,
   bilingual,
   readerMode,
   onTextSelect,
@@ -45,6 +45,12 @@ function BlockRow({
   onTextSelect: (block: DocumentBlock) => void
   onWordDoubleClick: (word: string, block: DocumentBlock) => void
 }) {
+  const block = {
+    ...initialBlock,
+    originalText: (initialBlock.originalText || '').replace(/<font[^>]*>|<\/font>/gi, '').trim(),
+    translatedText: initialBlock.translatedText ? initialBlock.translatedText.replace(/<font[^>]*>|<\/font>/gi, '').trim() : undefined
+  }
+
   const isCode = block.type === 'code'
   const isUntranslated = !block.translatedText && !isCode
   const [revealed, setRevealed] = useState(false)

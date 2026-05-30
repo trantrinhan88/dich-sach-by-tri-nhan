@@ -37,7 +37,8 @@ export async function parseSRT(buffer: ArrayBuffer): Promise<{
       continue
     }
     
-    const originalText = lines.slice(textStartIdx).join('\n')
+    const originalTextRaw = lines.slice(textStartIdx).join('\n')
+    const originalText = originalTextRaw.replace(/<font[^>]*>|<\/font>/gi, '').trim()
     if (!originalText) continue
     
     blocks.push({
