@@ -35,7 +35,7 @@ export interface DocumentBlock {
 }
 
 export type AIProvider = 'deepseek' | 'gemini' | 'openai' | 'claude'
-export type ExportFormat = 'html' | 'pdf' | 'epub' | 'docx'
+export type ExportFormat = 'html' | 'pdf' | 'epub' | 'docx' | 'srt'
 
 export interface TranslationConfig {
   provider: AIProvider
@@ -60,5 +60,5 @@ export interface ParseResult {
   blocks: DocumentBlock[]
   pageCount: number
   detectedLanguage?: string
-  fileType: 'pdf' | 'epub'
+  fileType: 'pdf' | 'epub' | 'srt'
 }

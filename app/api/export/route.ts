@@ -4,6 +4,7 @@ import { exportHTML } from '@/lib/exporters/html'
 import { exportPDF } from '@/lib/exporters/pdf'
 import { exportEPUB } from '@/lib/exporters/epub'
 import { exportDOCX } from '@/lib/exporters/docx'
+import { exportSRT } from '@/lib/exporters/srt'
 
 export const maxDuration = 120
 
@@ -12,6 +13,7 @@ const MIME: Record<ExportFormat, string> = {
   pdf: 'application/pdf',
   epub: 'application/epub+zip',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  srt: 'text/plain',
 }
 
 export async function POST(request: NextRequest) {
@@ -47,6 +49,9 @@ export async function POST(request: NextRequest) {
         break
       case 'docx':
         content = await exportDOCX(blocks, safeTitle, bilingual)
+        break
+      case 'srt':
+        content = exportSRT(blocks, bilingual)
         break
       default:
         return NextResponse.json({ error: 'Định dạng không hỗ trợ' }, { status: 400 })

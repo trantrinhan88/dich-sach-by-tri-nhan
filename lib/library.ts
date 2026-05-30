@@ -3,7 +3,7 @@ import { DocumentBlock } from './types'
 export interface BookMetadata {
   id: string
   title: string
-  fileType: 'pdf' | 'epub'
+  fileType: 'pdf' | 'epub' | 'srt'
   isFavorite: boolean
   lastPage: number
   totalPages: number

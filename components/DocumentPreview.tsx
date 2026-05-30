@@ -94,6 +94,11 @@ function BlockRow({
             </h3>
           ) : (
             <div className="space-y-1.5">
+              {!!block.metadata?.srtTimecode && (
+                <div className="text-[10px] font-mono text-yellow-600/80 mb-1 select-none">
+                  ⏱️ {block.metadata.srtTimecode as string}
+                </div>
+              )}
               <p 
                 onClick={handleToggleReveal}
                 onDoubleClick={handleDoubleClick}
@@ -124,9 +129,15 @@ function BlockRow({
         onMouseUp={() => onTextSelect(block)}
       >
         <div className="flex justify-between items-center text-[10px] text-gray-500 border-b border-white/5 pb-1">
-          <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">
-            {TYPE_BADGE[block.type] || 'P'}{lvl ? lvl : ''}
-          </span>
+          {block.metadata?.srtTimecode ? (
+            <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/35">
+              ⏱️ {block.metadata.srtTimecode as string}
+            </span>
+          ) : (
+            <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">
+              {TYPE_BADGE[block.type] || 'P'}{lvl ? lvl : ''}
+            </span>
+          )}
           <span className="italic">💡 Nhấp đúp vào từ tiếng Anh để tra nghĩa nhanh</span>
         </div>
         <div className="space-y-1.5 cursor-pointer" onClick={handleToggleReveal}>
@@ -170,12 +181,19 @@ function BlockRow({
             {block.translatedText || block.originalText}
           </h3>
         ) : (
-          <p 
-            onDoubleClick={handleDoubleClick}
-            className="text-[15px] leading-relaxed text-[#382613] select-text"
-          >
-            {block.translatedText || block.originalText}
-          </p>
+          <div className="space-y-1">
+            {!!block.metadata?.srtTimecode && (
+              <div className="text-[10px] font-mono text-yellow-600/80 mb-0.5 select-none">
+                ⏱️ {block.metadata.srtTimecode as string}
+              </div>
+            )}
+            <p 
+              onDoubleClick={handleDoubleClick}
+              className="text-[15px] leading-relaxed text-[#382613] select-text"
+            >
+              {block.translatedText || block.originalText}
+            </p>
+          </div>
         )}
       </div>
     )
@@ -191,10 +209,16 @@ function BlockRow({
       {/* Original */}
       <div className="bg-gray-950/40 p-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">
-            {TYPE_BADGE[block.type] || 'P'}
-            {block.style.level ? block.style.level : ''}
-          </span>
+          {block.metadata?.srtTimecode ? (
+            <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-500/35">
+              ⏱️ {block.metadata.srtTimecode as string}
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono bg-white/10 text-gray-300 px-2 py-0.5 rounded-full">
+              {TYPE_BADGE[block.type] || 'P'}
+              {block.style.level ? block.style.level : ''}
+            </span>
+          )}
           <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Gốc</span>
         </div>
         <p

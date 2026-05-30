@@ -4,7 +4,7 @@ import { useState, useRef, DragEvent, ChangeEvent } from 'react'
 import { DocumentBlock } from '@/lib/types'
 
 interface Props {
-  onFileParsed: (blocks: DocumentBlock[], fileName: string, fileType: 'pdf' | 'epub') => void
+  onFileParsed: (blocks: DocumentBlock[], fileName: string, fileType: 'pdf' | 'epub' | 'srt') => void
 }
 
 const MAX_MB = 50
@@ -26,8 +26,8 @@ export default function FileUpload({ onFileParsed }: Props) {
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase()
-    if (ext !== 'pdf' && ext !== 'epub') {
-      setError('Chỉ hỗ trợ file .pdf và .epub')
+    if (ext !== 'pdf' && ext !== 'epub' && ext !== 'srt') {
+      setError('Chỉ hỗ trợ file .pdf, .epub và .srt')
       return
     }
 
@@ -78,7 +78,7 @@ export default function FileUpload({ onFileParsed }: Props) {
         ${dragging ? 'border-transparent bg-white/20 dark:bg-black/40 scale-[1.01]' : 'border-white/20 hover:border-white/35'}
         ${loading ? 'cursor-wait pointer-events-none' : ''}`}
       style={{
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)',
+        background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)',
         color: '#ffffff',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: '18px'
@@ -92,7 +92,7 @@ export default function FileUpload({ onFileParsed }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.epub"
+        accept=".pdf,.epub,.srt"
         className="hidden"
         onChange={onChange}
       />
@@ -120,7 +120,7 @@ export default function FileUpload({ onFileParsed }: Props) {
           <p className="!text-yellow-200 text-[18px] font-medium">hoặc nhấn trực tiếp để duyệt file từ máy tính</p>
           <div className="pt-3">
             <span className="inline-block text-xs !text-yellow-300 font-bold uppercase tracking-wide bg-white/10 px-5 py-1.5 rounded-full border border-white/20 shadow-md backdrop-blur-sm">
-              ĐỊNH DẠNG HỖ TRỢ: .EPUB hoặc .PDF &nbsp;|&nbsp; TỐI ĐA {MAX_MB}MB
+              ĐỊNH DẠNG HỖ TRỢ: .EPUB, .PDF hoặc .SRT &nbsp;|&nbsp; TỐI ĐA {MAX_MB}MB
             </span>
           </div>
         </div>

@@ -228,7 +228,7 @@ export default function ApiConfig({ onConfigChange }: Props) {
     <div
       className="custom-gradient-card border border-white/10 rounded-[18px] shadow-lg overflow-hidden transition-all duration-300"
       style={{
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)',
+        background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)',
         color: '#facc15',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: '18px'

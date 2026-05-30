@@ -90,6 +90,20 @@ function applySplitMode(docBlocks: DocumentBlock[], splitMode: SplitMode): Docum
 }
 
 function getChapters(docBlocks: DocumentBlock[], splitMode: SplitMode = 'combined'): ChapterInfo[] {
+  const isSrt = docBlocks.some(b => b.metadata?.srtTimecode)
+  if (isSrt) {
+    const totalBlocks = docBlocks.length
+    const translatedCount = docBlocks.filter(b => b.translatedText && !b.translatedText.startsWith('[CHƯA DỊCH]')).length
+    return [{
+      href: 'subtitle_chapter',
+      title: 'Danh sách phụ đề SRT',
+      blocksCount: totalBlocks,
+      translatedCount,
+      isCompleted: totalBlocks === translatedCount,
+      firstBlockIndex: 0
+    }]
+  }
+
   const chapters: ChapterInfo[] = []
   let currentChapter: ChapterInfo = {
     href: 'intro',
@@ -158,6 +172,15 @@ function getChapters(docBlocks: DocumentBlock[], splitMode: SplitMode = 'combine
 }
 
 function getBlockChapterMap(docBlocks: DocumentBlock[], splitMode: SplitMode = 'combined'): Record<string, string> {
+  const isSrt = docBlocks.some(b => b.metadata?.srtTimecode)
+  if (isSrt) {
+    const map: Record<string, string> = {}
+    docBlocks.forEach(b => {
+      map[b.id] = 'subtitle_chapter'
+    })
+    return map
+  }
+
   const map: Record<string, string> = {}
   let currentChapterId = 'intro'
   let lastHref = ''
@@ -194,7 +217,7 @@ export default function Home() {
   const [step, setStep] = useState<Step>('upload')
   const [blocks, setBlocks] = useState<DocumentBlock[]>([])
   const [fileName, setFileName] = useState('')
-  const [fileType, setFileType] = useState<'pdf' | 'epub'>('pdf')
+  const [fileType, setFileType] = useState<'pdf' | 'epub' | 'srt'>('pdf')
   const [progress, setProgress] = useState({ completed: 0, total: 0 })
   const [partialTranslated, setPartialTranslated] = useState<DocumentBlock[]>([])
   const [exportFormat, setExportFormat] = useState<ExportFormat>('epub')
@@ -230,8 +253,12 @@ export default function Home() {
   const [selectedChapters, setSelectedChapters] = useState<string[]>([])
 
   useEffect(() => {
-    setSelectedChapters([])
-  }, [blocks])
+    if (blocks.length > 0 && fileType === 'srt') {
+      setSelectedChapters(['subtitle_chapter'])
+    } else {
+      setSelectedChapters([])
+    }
+  }, [blocks, fileType])
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg)
@@ -258,8 +285,8 @@ export default function Home() {
     if (!file) return
 
     const ext = file.name.split('.').pop()?.toLowerCase()
-    if (ext !== 'pdf' && ext !== 'epub') {
-      setError('Chỉ hỗ trợ file .pdf và .epub')
+    if (ext !== 'pdf' && ext !== 'epub' && ext !== 'srt') {
+      setError('Chỉ hỗ trợ file .pdf, .epub và .srt')
       e.target.value = ''
       return
     }
@@ -283,7 +310,7 @@ export default function Home() {
       setImportInfo(`Đang lưu sách ${file.name} vào thư viện IndexedDB...`)
 
       const id = `book_${Date.now()}`
-      const title = file.name.replace(/\.(pdf|epub)$/i, '')
+      const title = file.name.replace(/\.(pdf|epub|srt)$/i, '')
       const metadata: Omit<BookMetadata, 'createdAt' | 'lastReadAt'> = {
         id,
         title,
@@ -298,7 +325,7 @@ export default function Home() {
       triggerToast(`📥 Đã thêm sách "${title}" vào thư viện!`)
       loadLibrary()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lỗi nhập file EPUB/PDF')
+      setError(err instanceof Error ? err.message : 'Lỗi nhập file EPUB/PDF/SRT')
     } finally {
       setIsImporting(false)
       setImportInfo('')
@@ -316,6 +343,11 @@ export default function Home() {
       setStep('ready')
       setPartialTranslated([])
       setActiveTab('translate')
+      if (book.fileType === 'srt') {
+        setExportFormat('srt')
+      } else {
+        setExportFormat('epub')
+      }
       triggerToast(`⚡ Đã tải sách "${book.title}" vào phân khu Dịch sách!`)
     } catch (err) {
       console.error('Lỗi khi tải sách để dịch:', err)
@@ -374,7 +406,7 @@ export default function Home() {
   const autoSaveToLibrary = async (finalBlocks: DocumentBlock[]) => {
     try {
       const id = translatingBookId || `book_${Date.now()}`
-      const title = fileName.replace(/\.(pdf|epub)$/i, '')
+      const title = fileName.replace(/\.(pdf|epub|srt)$/i, '')
       const tCount = finalBlocks.filter(b => b.translatedText && !b.translatedText.startsWith('[CHƯA DỊCH]')).length
       const metadata: Omit<BookMetadata, 'createdAt' | 'lastReadAt'> = {
         id,
@@ -419,7 +451,7 @@ export default function Home() {
 
         let title = file.name.replace(/\.json$/i, '')
         let blocksToImport: DocumentBlock[] = []
-        let fType: 'pdf' | 'epub' = 'epub'
+        let fType: 'pdf' | 'epub' | 'srt' = 'epub'
 
         if (parsed && typeof parsed === 'object') {
           if (Array.isArray(parsed)) {
@@ -464,7 +496,7 @@ export default function Home() {
     e.target.value = ''
   }
 
-  const handleFileParsed = (parsedBlocks: DocumentBlock[], name: string, type: 'pdf' | 'epub') => {
+  const handleFileParsed = (parsedBlocks: DocumentBlock[], name: string, type: 'pdf' | 'epub' | 'srt') => {
     setBlocks(parsedBlocks)
     setFileName(name)
     setFileType(type)
@@ -472,6 +504,11 @@ export default function Home() {
     setPartialTranslated([])
     setError('')
     setSplitMode('combined')
+    if (type === 'srt') {
+      setExportFormat('srt')
+    } else {
+      setExportFormat('epub')
+    }
   }
 
   const handleResetChapterTranslation = (chapterId: string) => {
@@ -633,7 +670,7 @@ export default function Home() {
     setStep('translating')
 
     const splitBlocks = applySplitMode(blocks, splitMode)
-    const workingBlocks = bilingual ? expandForBilingual(splitBlocks) : splitBlocks
+    const workingBlocks = (bilingual && fileType !== 'srt') ? expandForBilingual(splitBlocks) : splitBlocks
     const chapterMap = getBlockChapterMap(workingBlocks, splitMode)
     
     // Chỉ dịch các câu thuộc chương được chọn và chưa được dịch (hoặc đã được reset)
@@ -810,7 +847,7 @@ export default function Home() {
         body: JSON.stringify({
           blocks: exportBlocks,
           format: exportFormat,
-          title: fileName.replace(/\.(pdf|epub)$/i, '') + (bilingual ? ' (Song ngữ)' : ' (Tiếng Việt)'),
+          title: fileName.replace(/\.(pdf|epub|srt)$/i, '') + (bilingual ? ' (Song ngữ)' : ' (Tiếng Việt)'),
           bilingual,
         }),
       })
@@ -824,7 +861,7 @@ export default function Home() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${fileName.replace(/\.(pdf|epub)$/i, '')}_${bilingual ? 'bilingual' : 'vi'}.${exportFormat}`
+      a.download = `${fileName.replace(/\.(pdf|epub|srt)$/i, '')}_${bilingual ? 'bilingual' : 'vi'}.${exportFormat}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -857,7 +894,7 @@ export default function Home() {
       {/* Thin Apple Global Nav (56px) */}
       <nav 
         className="h-[56px] border-b border-white/10 flex items-center px-6 sticky top-0 z-50 justify-between select-none shadow-sm"
-        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)' }}
+        style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}
       >
         <div className="flex items-center gap-6">
           <span className="text-yellow-300 font-bold text-[18px] tracking-wider cursor-pointer hover:opacity-80 active-scale transition-all flex items-center gap-1.5" onClick={() => resetToUpload()}>
@@ -877,11 +914,11 @@ export default function Home() {
       {/* Apple Sub-Nav (52px) */}
       <div 
         className="h-[52px] sticky top-[56px] z-40 border-b border-white/10 flex items-center justify-between px-6 shadow-md"
-        style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 40%, #0d9488 100%)' }}
+        style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}
       >
         <div className="flex items-center gap-3">
           <span className="font-serif font-semibold text-[18px] text-yellow-300 tracking-tight">
-            {fileName ? `📄 ${fileName.replace(/\.(pdf|epub)$/i, '')}` : "📖 Dịch Sách Song Ngữ"}
+            {fileName ? `📄 ${fileName.replace(/\.(pdf|epub|srt)$/i, '')}` : "📖 Dịch Sách Song Ngữ"}
           </span>
           {step !== 'upload' && activeTab === 'translate' && (
             <span className="text-[10px] uppercase font-mono tracking-widest bg-white/20 text-yellow-300 px-2.5 py-0.5 rounded-full font-bold border border-white/20 shadow-sm">
@@ -946,10 +983,10 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 px-5 py-2.5 bg-[#0066cc] hover:bg-[#0071e3] text-white text-xs font-bold rounded-full shadow-sm cursor-pointer transition-all active-scale shrink-0 select-none">
-                    <span>📥 Thêm sách mới (EPUB/PDF)</span>
+                    <span>📥 Thêm sách/phụ đề mới (EPUB/PDF/SRT)</span>
                     <input
                       type="file"
-                      accept=".epub,.pdf"
+                      accept=".epub,.pdf,.srt"
                       onChange={handleEpubImport}
                       className="hidden"
                     />
@@ -1038,7 +1075,8 @@ export default function Home() {
                       return (
                         <div
                           key={book.id}
-                          className="group relative bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-col justify-between hover:border-black/10 dark:hover:border-white/10 transition-all duration-300 shadow-sm hover:-translate-y-0.5 overflow-hidden"
+                          className="group relative border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-col justify-between hover:border-black/10 dark:hover:border-white/10 transition-all duration-300 shadow-sm hover:-translate-y-0.5 overflow-hidden"
+                          style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}
                         >
                           <div className="flex items-center justify-between gap-2 mb-4 z-10 select-none">
                             <span className="text-[8px] uppercase tracking-wider font-extrabold bg-[#0066cc]/10 dark:bg-[#2997ff]/10 text-[#0066cc] dark:text-[#2997ff] px-2.5 py-0.5 rounded-full border border-[#0066cc]/10 dark:border-[#2997ff]/10">
@@ -1178,7 +1216,7 @@ export default function Home() {
             {/* Step: Ready to translate */}
             {step === 'ready' && (
               <section className="space-y-5">
-                <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+                <div className="border border-black/5 dark:border-white/5 rounded-[22px] p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm" style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}>
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-900 dark:text-white font-bold text-sm truncate">📄 {fileName}</p>
                     <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 font-medium">{blocks.length} đoạn văn · {fileType.toUpperCase()}</p>
@@ -1190,7 +1228,7 @@ export default function Home() {
 
                 {/* Chapter Selector Section */}
                 {blocks.length > 0 && (
-                  <div className="bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-6 space-y-5 shadow-sm">
+                  <div className="border border-black/5 dark:border-white/5 rounded-[22px] p-6 space-y-5 shadow-sm" style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}>
                     <div className="border-b border-black/5 dark:border-white/5 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <h3 className="text-sm font-extrabold text-gray-900 dark:text-white tracking-wide uppercase">📖 DANH SÁCH CHƯƠNG</h3>
@@ -1418,7 +1456,7 @@ export default function Home() {
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-3 items-center select-none">
-                      {(['epub', 'html', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
+                      {((fileType === 'srt' ? ['srt', 'html', 'docx', 'pdf'] : ['epub', 'html', 'docx', 'pdf']) as ExportFormat[]).map(fmt => (
                         <button
                           key={fmt}
                           onClick={() => setExportFormat(fmt)}
@@ -1463,7 +1501,7 @@ export default function Home() {
 
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="text-gray-400 dark:text-gray-500 text-xs font-bold">Xuất ra:</span>
-                    {(['html', 'epub', 'docx', 'pdf'] as ExportFormat[]).map(fmt => (
+                    {((fileType === 'srt' ? ['srt', 'html', 'docx', 'pdf'] : ['html', 'epub', 'docx', 'pdf']) as ExportFormat[]).map(fmt => (
                       <button
                         key={fmt}
                         onClick={() => setExportFormat(fmt)}

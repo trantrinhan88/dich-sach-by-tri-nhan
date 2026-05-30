@@ -660,8 +660,28 @@
 .custom-gradient-card select option,
 .light-theme .custom-gradient-card select option {
   background-color: #0f172a !important;
-  color: #facc15 !important;
+  color: #000000 !important;
   font-weight: bold !important;
+}
+
+/* User global styling overrides: all text black, Times New Roman, 18px size */
+*, 
+* *, 
+*::placeholder, 
+input::placeholder, 
+textarea::placeholder,
+.text-yellow-100, .text-yellow-200, .text-yellow-300, .text-yellow-400, .text-yellow-500, .text-yellow-600,
+.\!text-yellow-100, .\!text-yellow-200, .\!text-yellow-300, .\!text-yellow-400, .\!text-yellow-500, .\!text-yellow-600,
+.text-yellow-300\/80, .\!text-yellow-300\/80, .text-yellow-200\/80, .\!text-yellow-200\/80,
+.hover\:text-yellow-300:hover, .hover\:text-yellow-200:hover, .hover\:\!text-yellow-300:hover, .hover\:\!text-yellow-200:hover,
+.group-hover\:text-yellow-300:hover, .group-hover\:text-yellow-200:hover, .group-hover\:\!text-yellow-300:hover, .group-hover\:\!text-yellow-200:hover,
+.light-theme .text-yellow-300, .light-theme .text-yellow-400, .light-theme .\!text-yellow-300, .light-theme .\!text-yellow-400,
+.light-theme .text-yellow-100, .light-theme .text-yellow-200, .light-theme .\!text-yellow-100, .light-theme .\!text-yellow-200,
+.text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400, .text-amber-500, .text-amber-600,
+.\!text-amber-100, .\!text-amber-200, .\!text-amber-300, .\!text-amber-400, .\!text-amber-500, .\!text-amber-600 {
+  color: #000000 !important;
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: 18px !important;
 }
 
 

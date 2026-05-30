@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parsePDF } from '@/lib/parsers/pdf'
 import { parseEPUB } from '@/lib/parsers/epub'
+import { parseSRT } from '@/lib/parsers/srt'
 
 export const maxDuration = 60
 
@@ -26,8 +27,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ blocks, pageCount, fileType: 'epub', fileName: file.name })
     }
 
+    if (fileName.endsWith('.srt')) {
+      const { blocks, pageCount } = await parseSRT(buffer)
+      return NextResponse.json({ blocks, pageCount, fileType: 'srt', fileName: file.name })
+    }
+
     return NextResponse.json(
-      { error: 'Định dạng không hỗ trợ. Chỉ hỗ trợ .pdf và .epub' },
+      { error: 'Định dạng không hỗ trợ. Chỉ hỗ trợ .pdf, .epub và .srt' },
       { status: 400 }
     )
   } catch (err) {

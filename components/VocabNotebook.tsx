@@ -331,7 +331,8 @@ export default function VocabNotebook() {
                 return (
                   <div 
                     key={item.id}
-                    className="relative overflow-hidden bg-white dark:bg-[#1c1c1e] border border-black/5 dark:border-white/5 rounded-[22px] p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-black/10 dark:hover:border-white/10 transition-all duration-300"
+                    className="relative overflow-hidden border border-black/5 dark:border-white/5 rounded-[22px] p-5 flex flex-col justify-between space-y-4 shadow-sm hover:border-black/10 dark:hover:border-white/10 transition-all duration-300"
+                    style={{ background: 'linear-gradient(to bottom, #d2e9ff 0%, #ffffff 100%)' }}
                   >
                     {/* Top line with word details & delete */}
                     <div className="flex justify-between items-start">
