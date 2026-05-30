@@ -17,7 +17,7 @@ export function exportSRT(blocks: DocumentBlock[], bilingual?: boolean): string 
     let text = ''
     if (bilingual) {
       if (translated && translated !== original) {
-        text = `${translated}\n${original}`
+        text = `<font color="#ffffff">${original}</font>\n<font color="#ffff00">${translated}</font>`
       } else {
         text = original
       }
